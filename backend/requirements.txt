@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+yfinance
+requests
+beautifulsoup4
+textblob
+nltk
+pandas
+scipy
+apscheduler
+sqlalchemy
