@@ -10,8 +10,8 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'CAPITAL SENSE | Pantau Saham & Berita',
-  description: 'Aplikasi pemantauan saham dan analisis sentimen berita untuk Gen Z.',
+  title: 'CAPITAL SENSE | Market Intelligence',
+  description: 'Platform analisis saham dan berita ekonomi cerdas.',
 };
 
 export default function RootLayout({

@@ -22,7 +22,7 @@ export default function LoginPage() {
         if (code === ACCESS_CODE) {
             // Set simple cookie
             document.cookie = "auth_token=valid; path=/; max-age=86400"; // Expires in 1 day
-            router.push('/market');
+            router.push('/');
         } else {
             setError(true);
             setTimeout(() => setError(false), 2000);

@@ -49,7 +49,7 @@ export default function Home() {
       </section>
 
       <footer className="w-full text-center py-8 text-gray-500 text-sm border-t border-white/5">
-        <p>© 2026 CAPITAL SENSE. Built for Smart Investors.</p>
+        <p>© 2026 CAPITAL SENSE. All Rights Reserved.</p>
       </footer>
     </main>
   );

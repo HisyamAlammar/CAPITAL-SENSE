@@ -77,7 +77,9 @@ export default function StockDetailPage() {
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 className={`inline-block px-4 py-2 rounded-xl mt-2 font-bold text-sm
-                            ${prediction.prediction.includes("UP") ? "bg-green-500/20 text-green-400 border border-green-500/50" : "bg-red-500/20 text-red-400 border border-red-500/50"}
+                            ${prediction.prediction.includes("BUY") ? "bg-green-500/20 text-green-400 border border-green-500/50" :
+                                        prediction.prediction.includes("SELL") ? "bg-red-500/20 text-red-400 border border-red-500/50" :
+                                            "bg-gray-500/20 text-gray-400 border border-gray-500/50"}
                             `}
                             >
                                 {prediction.prediction} ({prediction.confidence} Confidence)
@@ -122,39 +124,39 @@ export default function StockDetailPage() {
                     {/* Analysis Box */}
                     <div className="glass-panel p-6 rounded-3xl">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                            <AlertCircle size={20} className="text-purple-400" /> Analisis Smart AI (Tech + Fundamental)
+                            <AlertCircle size={20} className="text-purple-400" /> Analisis Smart AI (3 Pillar)
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             {/* Technical */}
                             <div className="bg-white/5 p-4 rounded-xl">
-                                <span className="text-gray-400 block mb-1">Teknikal (MA Cross)</span>
-                                <span className={`text-lg font-bold ${prediction?.signals?.technical === 'BULLISH' ? 'text-green-400' : prediction?.signals?.technical === 'BEARISH' ? 'text-red-400' : 'text-gray-200'}`}>
-                                    {prediction?.signals?.technical}
+                                <span className="text-gray-400 block mb-1">Teknikal (Tren)</span>
+                                <span className={`text-lg font-bold ${prediction?.signals?.technical?.includes('BULLISH') ? 'text-green-400' : prediction?.signals?.technical?.includes('BEARISH') ? 'text-red-400' : 'text-gray-200'}`}>
+                                    {prediction?.signals?.technical?.split('(')[0] || 'NEUTRAL'}
                                 </span>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    MA5: {prediction?.signals?.ma_5} | MA20: {prediction?.signals?.ma_20}
+                                    {prediction?.signals?.technical?.includes('(') ? prediction?.signals?.technical?.split('(')[1].replace(')', '') : 'Indikator Netral'}
                                 </div>
                             </div>
 
-                            {/* Micro */}
+                            {/* Fundamental */}
                             <div className="bg-white/5 p-4 rounded-xl">
-                                <span className="text-gray-400 block mb-1">Fundamental (Micro)</span>
-                                <span className={`text-lg font-bold ${prediction?.signals?.micro?.includes('STRONG') ? 'text-green-400' : prediction?.signals?.micro?.includes('WEAK') ? 'text-red-400' : 'text-gray-200'}`}>
-                                    {prediction?.signals?.micro?.split('(')[0] || 'NEUTRAL'}
+                                <span className="text-gray-400 block mb-1">Fundamental (Kualitas)</span>
+                                <span className={`text-lg font-bold ${prediction?.signals?.fundamental?.includes('STRONG') ? 'text-green-400' : prediction?.signals?.fundamental?.includes('WEAK') ? 'text-red-400' : 'text-gray-200'}`}>
+                                    {prediction?.signals?.fundamental?.split('(')[0] || 'NEUTRAL'}
                                 </span>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    {prediction?.signals?.micro?.includes('(') ? prediction?.signals?.micro?.split('(')[1].replace(')', '') : 'Valuasi Wajar'}
+                                    {prediction?.signals?.fundamental?.includes('(') ? prediction?.signals?.fundamental?.split('(')[1].replace(')', '') : 'Data Cukup'}
                                 </div>
                             </div>
 
-                            {/* Macro */}
+                            {/* Sentiment */}
                             <div className="bg-white/5 p-4 rounded-xl">
-                                <span className="text-gray-400 block mb-1">Market Trend (Macro)</span>
-                                <span className={`text-lg font-bold ${prediction?.signals?.macro?.includes('bullish') ? 'text-green-400' : prediction?.signals?.macro?.includes('bearish') ? 'text-red-400' : 'text-gray-200'}`}>
-                                    {prediction?.signals?.macro?.split('(')[0].toUpperCase() || 'NEUTRAL'}
+                                <span className="text-gray-400 block mb-1">Sentimen Berita</span>
+                                <span className={`text-lg font-bold ${prediction?.signals?.sentiment?.includes('BULLISH') ? 'text-green-400' : prediction?.signals?.sentiment?.includes('BEARISH') ? 'text-red-400' : 'text-gray-200'}`}>
+                                    {prediction?.signals?.sentiment?.split('(')[0] || 'NEUTRAL'}
                                 </span>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    {prediction?.signals?.macro?.includes('(') ? prediction?.signals?.macro?.split('(')[1].replace(')', '') : 'Sentimen Pasar'}
+                                    {prediction?.signals?.sentiment?.includes('(') ? prediction?.signals?.sentiment?.split('(')[1].replace(')', '') : 'Berita Netral'}
                                 </div>
                             </div>
 
@@ -223,26 +225,23 @@ export default function StockDetailPage() {
                             Proyeksi Pasar (3 Bulan)
                         </h3>
                         <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg text-xs text-yellow-200 mb-6">
-                            ⚠️ Disclaimer: Proyeksi ini adalah simulasi berdasarkan tren MA20 dan Sentimen saat ini. Bukan saran finansial.
+                            ⚠️ Disclaimer: Proyeksi ini adalah simulasi AI berdasarkan Tren, Valuasi, dan Sentimen. Bukan saran finansial pasti.
                         </div>
 
                         <div className="space-y-6">
                             <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                                <span className="text-gray-400">Target Harga (Estimasi)</span>
-                                <span className="text-xl font-bold text-white">
-                                    {prediction.prediction.includes("UP")
-                                        ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(prediction.price * 1.08)
-                                        : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(prediction.price * 0.92)
-                                    }
+                                <span className="text-gray-400">Target Harga (AI Estimate)</span>
+                                <span className={`text-3xl font-bold ${prediction.prediction.includes("BUY") ? "text-green-400" : prediction.prediction.includes("SELL") ? "text-red-400" : "text-gray-400"}`}>
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(prediction.target_price)}
                                 </span>
                             </div>
 
                             <div className="space-y-2">
                                 <span className="text-sm text-gray-400">Analisis Pendukung:</span>
                                 <ul className="list-disc pl-5 text-sm space-y-1 text-gray-300">
-                                    <li>Tren Jangka Pendek: <span className="text-white font-medium">{prediction.signals.technical}</span></li>
-                                    <li>Sentimen Berita & Valuasi: <span className="text-white font-medium">{prediction.signals.micro.split('(')[0]}</span></li>
-                                    <li>Kondisi IHSG: <span className="text-white font-medium">{prediction.signals.macro.split('(')[0]}</span></li>
+                                    <li>Teknikal: <span className="text-white font-medium">{prediction.signals.technical.split('(')[0]}</span></li>
+                                    <li>Fundamental: <span className="text-white font-medium">{prediction.signals.fundamental.split('(')[0]}</span></li>
+                                    <li>Sentimen: <span className="text-white font-medium">{prediction.signals.sentiment.split('(')[0]}</span></li>
                                 </ul>
                             </div>
 

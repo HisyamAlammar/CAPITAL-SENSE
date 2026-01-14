@@ -54,6 +54,30 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
         return `Rp ${val.toLocaleString('id-ID')}`;
     };
 
+    // Reusable Metric Card with Tooltip
+    const MetricCard = ({ icon: Icon, label, value, target, colorClass, tooltip, colSpan = "" }: any) => (
+        <div className={`p-4 rounded-xl bg-white/5 border border-white/5 relative group ${colSpan}`}>
+            <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider mb-2">
+                <Icon size={14} />
+                {label}
+                <div className="relative">
+                    <Info size={12} className="opacity-50 hover:opacity-100 transition-opacity cursor-help text-cyan-400" />
+                    {/* Tooltip Popup */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-gray-900 border border-white/10 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                        <p className="text-[10px] text-gray-300 leading-relaxed text-center">
+                            {tooltip}
+                        </p>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+                    </div>
+                </div>
+            </div>
+            <div className={clsx("text-lg font-bold", colorClass || "text-white")}>
+                {value}
+            </div>
+            {target && <div className="text-[10px] text-gray-500 mt-1">{target}</div>}
+        </div>
+    );
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -75,68 +99,48 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Market Cap */}
-                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider mb-2">
-                        <PieChart size={14} />
-                        Market Cap
-                    </div>
-                    <div className="text-lg font-bold text-white">
-                        {formatCurrency(data.market_cap)}
-                    </div>
-                </div>
+                <MetricCard
+                    icon={PieChart}
+                    label="Market Cap"
+                    value={formatCurrency(data.market_cap)}
+                    tooltip="Nilai total seluruh saham perusahaan. Menunjukkan seberapa besar ukuran perusahaan (Big Cap vs Small Cap)."
+                />
 
-                {/* PER (Price to Earnings) */}
-                <div className="p-4 rounded-xl bg-white/5 border border-white/5 relative group">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider mb-2">
-                        <DollarSign size={14} />
-                        PER (Valuasi)
-                        <Info size={12} className="opacity-50 group-hover:opacity-100 transition-opacity cursor-help" />
-                    </div>
-                    <div className={clsx("text-lg font-bold", per > 0 && per < 15 ? "text-green-400" : "text-gray-200")}>
-                        {per ? per.toFixed(2) + "x" : "-"}
-                    </div>
-                    <div className="text-[10px] text-gray-500 mt-1">Target: &lt; 15x (Murah)</div>
-                </div>
+                <MetricCard
+                    icon={DollarSign}
+                    label="PER (Valuasi)"
+                    value={per ? per.toFixed(2) + "x" : "-"}
+                    target="Target: < 15x (Murah)"
+                    colorClass={per > 0 && per < 15 ? "text-green-400" : "text-gray-200"}
+                    tooltip="Price-to-Earnings: Membandingkan harga saham dengan laba per lembar. Semakin rendah, semakin 'murah' (undervalued)."
+                />
 
-                {/* PBV (Price to Book) */}
-                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider mb-2">
-                        <Scale size={14} />
-                        PBV Ratio
-                    </div>
-                    <div className={clsx("text-lg font-bold", pbv > 0 && pbv < 1.5 ? "text-green-400" : "text-gray-200")}>
-                        {pbv ? pbv.toFixed(2) + "x" : "-"}
-                    </div>
-                    <div className="text-[10px] text-gray-500 mt-1">Target: &lt; 1.5x (Undervalued)</div>
-                </div>
+                <MetricCard
+                    icon={Scale}
+                    label="PBV Ratio"
+                    value={pbv ? pbv.toFixed(2) + "x" : "-"}
+                    target="Target: < 1.5x (Undervalued)"
+                    colorClass={pbv > 0 && pbv < 1.5 ? "text-green-400" : "text-gray-200"}
+                    tooltip="Price-to-Book: Membandingkan harga saham dengan nilai aset bersih. Di bawah 1x berarti harga diskon dari asetnya."
+                />
 
-                {/* ROE (Return on Equity) */}
-                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider mb-2">
-                        <Activity size={14} />
-                        ROE (Profit)
-                    </div>
-                    <div className={clsx("text-lg font-bold", roe > 15 ? "text-green-400" : "text-gray-200")}>
-                        {roe ? roe.toFixed(1) + "%" : "-"}
-                    </div>
-                    <div className="text-[10px] text-gray-500 mt-1">Target: &gt; 15% (Profitable)</div>
-                </div>
+                <MetricCard
+                    icon={Activity}
+                    label="ROE (Profit)"
+                    value={roe ? roe.toFixed(1) + "%" : "-"}
+                    target="Target: > 15% (Profitable)"
+                    colorClass={roe > 15 ? "text-green-400" : "text-gray-200"}
+                    tooltip="Return on Equity: Seberapa efisien perusahaan menghasilkan laba dari modal pemegang saham. Di atas 15% sangat bagus."
+                />
 
-                {/* Dividend Yield */}
-                <div className="p-4 rounded-xl bg-white/5 border border-white/5 col-span-2 lg:col-span-4 flex items-center justify-between">
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider mb-1">
-                            Dividend Yield
-                        </div>
-                        <div className={clsx("text-xl font-bold", divYield > 4 ? "text-green-400" : "text-white")}>
-                            {divYield ? divYield.toFixed(2) + "%" : "-"} / tahun
-                        </div>
-                    </div>
-                    <div className="text-right text-xs text-gray-500 max-w-[200px]">
-                        Dividen adalah bagi hasil keuntungan perusahaan kepada investor.
-                    </div>
-                </div>
+                <MetricCard
+                    icon={DollarSign}
+                    label="Dividend Yield"
+                    value={divYield ? divYield.toFixed(2) + "% / tahun" : "-"}
+                    colSpan="col-span-2 lg:col-span-4"
+                    colorClass={divYield > 4 ? "text-green-400" : "text-white"}
+                    tooltip="Persentase keuntungan tunai yang dibagikan perusahaan kepada investor setiap tahunnya (relatif terhadap harga saham)."
+                />
             </div>
         </motion.div>
     );

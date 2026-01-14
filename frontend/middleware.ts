@@ -19,13 +19,10 @@ export function middleware(request: NextRequest) {
 
     // 4. Redirect Authenticated User away from Login
     if (path === '/login' && isAuthenticated) {
-        return NextResponse.redirect(new URL('/market', request.url));
+        return NextResponse.redirect(new URL('/', request.url));
     }
 
-    // Redirect Root to Market if authenticated, else login
-    if (path === '/' && isAuthenticated) {
-        return NextResponse.redirect(new URL('/market', request.url));
-    }
+    // Allow access to root if authenticated (don't redirect to market)
 
     return NextResponse.next();
 }

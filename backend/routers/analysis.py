@@ -8,125 +8,146 @@ router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 @router.get("/prediction/{symbol}")
 async def get_stock_prediction(symbol: str):
     """
-    Generate a simple prediction based on Technical (RSI/MA) + Fundamental (News Logic).
+    Generate Advanced AI Prediction based on 3 Pillars:
+    1. Technical (Trend, MA)
+    2. Fundamental (Valuation, Profitability)
+    3. Sentiment (News, Market Mood)
     """
     ticker = f"{symbol.upper()}.JK"
     
     try:
-        # --- 1. Technical Analysis (40%) ---
         stock = yf.Ticker(ticker)
         hist = stock.history(period="1mo")
-        
-        technical_score = 0
-        technical_signal = "NEUTRAL"
-        
-        if not hist.empty:
-            current_price = hist["Close"].iloc[-1]
-            ma_short = hist["Close"].tail(5).mean()
-            ma_long = hist["Close"].mean()
-            
-            # Golden Cross Logic
-            if current_price > ma_long: technical_score += 1
-            if ma_short > ma_long: technical_score += 1
-            
-            if technical_score >= 2: technical_signal = "BULLISH"
-            elif technical_score == 0: technical_signal = "BEARISH"
-        else:
-            return {"error": "No data found"}
-
-        # --- 2. Micro Economics (Financials + News Sentiment) (40%) ---
-        micro_score = 0
-        micro_reason = []
         info = stock.info
         
-        # A. Valuation (PER & PBV)
+        if hist.empty:
+            return {"error": "No data found"}
+            
+        current_price = hist["Close"].iloc[-1]
+        
+        # --- 1. Technical Analysis (30%) ---
+        ma5 = hist["Close"].tail(5).mean()
+        ma20 = hist["Close"].mean()
+        
+        tech_score = 0
+        tech_reasons = []
+        
+        if ma5 > ma20:
+            tech_score += 1
+            tech_reasons.append("MA5 > MA20 (Uptrend)")
+        if current_price > ma20:
+            tech_score += 1
+            tech_reasons.append("Price > MA20")
+            
+        tech_signal = "NEUTRAL"
+        if tech_score == 2: tech_signal = "BULLISH"
+        elif tech_score == 0: tech_signal = "BEARISH"
+
+        # --- 2. Fundamental Analysis (40%) ---
+        fund_score = 0
+        fund_reasons = []
+        
         per = info.get("trailingPE", 0)
         pbv = info.get("priceToBook", 0)
+        roe = info.get("returnOnEquity", 0)
+        div = info.get("dividendYield", 0)
         
+        # Valuation
         if per > 0 and per < 15: 
-            micro_score += 1
-            micro_reason.append("Valuasi Murah")
-        elif per > 35: 
-            micro_score -= 1
-            micro_reason.append("Valuasi Mahal")
-            
+            fund_score += 1
+            fund_reasons.append("PER Rendah")
+        elif per > 35: fund_score -= 1
+        
         if pbv > 0 and pbv < 1.5: 
-            micro_score += 1
-            micro_reason.append("Aset Undervalued")
-        elif pbv > 8: 
-             micro_score -= 1
+            fund_score += 1
+            fund_reasons.append("PBV Undervalued")
+            
+        # Profitability
+        if roe and roe > 0.15: # 15%
+            fund_score += 1
+            fund_reasons.append("ROE Tinggi")
+            
+        # Dividend
+        if div and div > 0.03: # 3%
+            fund_score += 1
+            fund_reasons.append("Dividen Menarik")
 
-        # B. News Sentiment for Specific Stock
-        # Dynamically fetch news for this symbol
+        fund_signal = "NEUTRAL"
+        if fund_score >= 3: fund_signal = "STRONG"
+        elif fund_score >= 1: fund_signal = "GOOD"
+        elif fund_score < 0: fund_signal = "WEAK"
+
+        # --- 3. Sentiment & Macro (30%) ---
+        # Fetch generic news for sentiment
         from news_service import fetch_google_news
-        stock_news = fetch_google_news(f"{symbol} saham", limit=5) # Fetch 5 latest news
+        stock_news = fetch_google_news(f"{symbol} saham", limit=5)
         
         pos_news = len([n for n in stock_news if n['sentiment_label'] == 'POSITIVE'])
         neg_news = len([n for n in stock_news if n['sentiment_label'] == 'NEGATIVE'])
         
+        sent_score = 0
+        sent_reasons = []
+        
         if pos_news > neg_news:
-            micro_score += 1
-            micro_reason.append(f"Sentimen Berita Positif ({pos_news} vs {neg_news})")
+            sent_score += 1
+            sent_reasons.append(f"Berita Positif Dominan ({pos_news} vs {neg_news})")
         elif neg_news > pos_news:
-            micro_score -= 1
-            micro_reason.append(f"Sentimen Berita Negatif ({neg_news} vs {pos_news})")
-        
-        micro_signal = "NEUTRAL"
-        if micro_score >= 1: micro_signal = "STRONG"
-        elif micro_score < 0: micro_signal = "WEAK"
-
-        # --- 3. Macro Economics (Market Context) (20%) ---
-        # Simulating Market Condition (IHSG Trend) based on general market tickers
-        macro_signal = "NEUTRAL"
-        macro_score = 0
-        
-        try:
-            ihsg = yf.Ticker("^JKSE")
-            ihsg_hist = ihsg.history(period="5d")
-            if not ihsg_hist.empty:
-                ihsg_change = (ihsg_hist["Close"].iloc[-1] - ihsg_hist["Close"].iloc[0]) / ihsg_hist["Close"].iloc[0]
-                if ihsg_change > 0.005: 
-                    macro_signal = "bullish (IHSG Hijau)"
-                    macro_score = 1
-                elif ihsg_change < -0.005: 
-                    macro_signal = "bearish (IHSG Merah)"
-                    macro_score = -1
-        except:
-            macro_signal = "neutral (Data IHSG N/A)"
-
-        # --- Final Scoring ---
-        # Tech (0-2) + Micro (-2 to 4) + Macro (-1 to 1) 
-        
-        total_score = technical_score + micro_score + macro_score
-        
-        final_prediction = "HOLD"
-        confidence = 50
-        
-        if total_score >= 3:
-            final_prediction = "POTENTIAL UP"
-            confidence = min(60 + (total_score * 8), 95)
-        elif total_score <= 0:
-            final_prediction = "POTENTIAL DOWN"
-            confidence = min(60 + (abs(total_score) * 8), 90)
+            sent_score -= 1
+            sent_reasons.append(f"Berita Negatif Dominan ({neg_news} vs {pos_news})")
         else:
-            final_prediction = "HOLD / WATCH"
-            confidence = 50
+            sent_reasons.append("Sentimen Berita Netral")
+
+        # --- Final Calculation ---
+        # Max Score: Tech(2) + Fund(4) + Sent(1) = 7
+        total_score = tech_score + fund_score + sent_score
+        max_score = 7
+        
+        confidence = min(max(50 + (total_score * 7), 10), 98) # Normalize to 10-98%
+        
+        # Prediction Logic
+        if total_score >= 4:
+            prediction = "STRONG BUY" if total_score >= 5 else "BUY"
+            direction = "UP"
+        elif total_score <= 1:
+            prediction = "STRONG SELL" if total_score <= -1 else "SELL"
+            direction = "DOWN"
+        else:
+            prediction = "HOLD"
+            direction = "SIDEWAYS"
             
+        # AI Price Projection (3 Months)
+        # Logic: Current * (100% + (Score/MaxScore * VolatilityFactor))
+        volatility = 0.15 # Assume 15% volatility cap for 3 months
+        
+        if direction == "UP":
+            projected_change = (total_score / max_score) * volatility
+        elif direction == "DOWN":
+            projected_change = (total_score / max_score) * volatility # total_score is low/neg, so this works if formalized
+            # To be safe for neg scores:
+            if total_score > 0: projected_change = 0.02
+            else: projected_change = -0.05 # Fallback
+        else:
+            projected_change = 0.02 # Slight inflation adjustment for Hold
+            
+        projected_price = current_price * (1 + projected_change)
+
         return {
             "symbol": symbol.upper(),
             "price": current_price,
-            "prediction": final_prediction,
-            "confidence": f"{confidence}%",
+            "prediction": prediction,
+            "confidence": f"{int(confidence)}%",
+            "target_price": int(projected_price),
             "signals": {
-                "technical": technical_signal,
-                "micro": f"{micro_signal} ({', '.join(micro_reason)})" if micro_reason else micro_signal,
-                "macro": macro_signal,
-                "ma_5": round(ma_short, 0),
-                "ma_20": round(ma_long, 0)
+                "technical": f"{tech_signal} ({', '.join(tech_reasons)})",
+                "fundamental": f"{fund_signal} ({', '.join(fund_reasons)})",
+                "sentiment": f"{'BULLISH' if sent_score > 0 else 'BEARISH' if sent_score < 0 else 'NEUTRAL'} ({', '.join(sent_reasons)})",
+                "ma_5": round(ma5, 0),
+                "ma_20": round(ma20, 0)
             }
         }
         
     except Exception as e:
+        print(f"Error in prediction: {e}")
         return {"error": str(e)}
 
 @router.get("/recap")
@@ -154,37 +175,14 @@ async def get_daily_recap():
         neg = len([a for a in articles if a.sentiment_label == "NEGATIVE"])
         sentiment_score = pos - neg
         
-        # 3. Key Topics (Prioritize Indices/Tickers)
-        all_text = " ".join([a.title for a in articles]).upper() # Upper for ticker matching
-        
-        # Priority Keywords
-        priority_terms = ["IHSG", "JCI", "FED", "BI", "US TREASURY", "RUPIAH", "INFLASI"]
-        
-        # Add Popular Tickers
-        from .stocks import POPULAR_TICKERS
-        clean_tickers = [t.replace(".JK", "") for t in POPULAR_TICKERS]
-        priority_terms.extend(clean_tickers)
-        
-        found_topics = []
-        for term in priority_terms:
-            if term in all_text:
-                count = all_text.count(term)
-                if count > 0:
-                    found_topics.append((term, count))
-                    
-        # Sort by frequency
-        found_topics.sort(key=lambda x: x[1], reverse=True)
-        top_matches = found_topics[:3]
-        
-        if top_matches:
-            topic_str = ", ".join([t[0] for t in top_matches])
-        else:
-             # Fallback to old method (Common words)
-             words = re.findall(r'\w+', all_text.lower())
-             ignored = ["di", "ke", "dan", "yang", "ini", "itu", "saham", "untuk", "pt", "tbk", "indonesia", "dengan", "akan", "pada", "market", "bursa", "news", "hari", "juta", "miliar", "triliun", "rp"]
-             keywords = [w for w in words if w not in ignored and len(w) > 3]
-             top_common = Counter(keywords).most_common(2)
-             topic_str = ", ".join([t[0].title() for t in top_common])
+        # 3. Key Topics (Most frequent words in titles)
+        all_text = " ".join([a.title for a in articles]).lower()
+        words = re.findall(r'\w+', all_text)
+        ignored = ["di", "ke", "dan", "yang", "ini", "itu", "saham", "untuk", "pt", "tbk", "indonesia", "dengan", "akan", "pada", "market", "bursa", "news", "hari", "juta", "miliar", "triliun", "rp"]
+        keywords = [w for w in words if w not in ignored and len(w) > 3]
+        top_topics = Counter(keywords).most_common(3)
+        # Custom formatting: IHSG capitalized, others Title Case
+        topic_str = ", ".join([t[0].upper() if t[0].lower() == 'ihsg' else t[0].title() for t in top_topics])
         
         # 4. Top Stock (Most mentioned)
         stock_counts = Counter([a.related_stock for a in articles if a.related_stock != "Global"])
