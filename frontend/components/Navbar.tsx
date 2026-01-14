@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Newspaper, LineChart, LogOut } from 'lucide-react';
+import { LayoutDashboard, Newspaper, LineChart, LogOut, PieChart } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -40,6 +40,13 @@ export default function Navbar() {
                         }`}
                 >
                     <Newspaper size={16} /> Berita
+                </Link>
+                <Link
+                    href="/portfolio"
+                    className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${pathname === '/portfolio' ? 'bg-white/10 text-white' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                        }`}
+                >
+                    <PieChart size={16} /> Portfolio
                 </Link>
             </div>
 

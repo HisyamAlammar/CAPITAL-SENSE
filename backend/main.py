@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import stocks, news, analysis
+from routers import stocks, news, analysis, portfolio
 from worker import start_scheduler
 from contextlib import asynccontextmanager
 from news_service import load_ai_model
@@ -19,7 +19,7 @@ app = FastAPI(title="IndoStockSentiment API", version="1.0.0", lifespan=lifespan
 # Enable CORS for Next.js frontend (localhost:3000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,6 +32,7 @@ async def root():
 app.include_router(stocks.router)
 app.include_router(news.router)
 app.include_router(analysis.router)
+app.include_router(portfolio.router)
 
 if __name__ == "__main__":
     import uvicorn

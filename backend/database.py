@@ -28,6 +28,18 @@ class NewsArticle(Base):
     # "BBCA", "BBRI", etc. for specific stock news
     related_stock = Column(String, default="Global", index=True)
 
+class Portfolio(Base):
+    __tablename__ = "portfolios"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True) # E.g., BBCA
+    avg_price = Column(Float) # Average Buy Price
+    total_shares = Column(Integer) # Total Lots * 100 often, but let's store shares directly or lots? Let's assume Lots for user friendliness but store SHares for precision? 
+    # Let's simple: store Total Shares (Lembar). User inputs Lots, we convert.
+    
+    # Optional: Track total invested amount for better precision
+    total_invested = Column(Float, default=0.0)
+
 # Create tables
 def init_db():
     Base.metadata.create_all(bind=engine)
