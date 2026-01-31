@@ -19,7 +19,7 @@ app = FastAPI(title="IndoStockSentiment API", version="1.0.0", lifespan=lifespan
 # Enable CORS for Next.js frontend (localhost:3000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

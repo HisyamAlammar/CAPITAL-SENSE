@@ -274,6 +274,7 @@ export default function StockDashboard({ simpleView = false }: { simpleView?: bo
                                                 {externalStock.symbol}
                                             </h3>
                                             <p className="text-xs text-gray-400 truncate max-w-[150px]">{externalStock.name}</p>
+                                            {externalStock.sector && <p className="text-[10px] text-gray-500 mt-1">{externalStock.sector}</p>}
                                         </div>
                                         {externalStock.status === 'up' ? <ArrowUpRight className="text-green-400" /> : <ArrowDownRight className="text-red-400" />}
                                     </div>

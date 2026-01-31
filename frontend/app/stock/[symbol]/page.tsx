@@ -117,7 +117,12 @@ export default function StockDetailPage() {
                             pe_ratio: stockData.pe_ratio,
                             pbv_ratio: stockData.pbv_ratio,
                             roe: stockData.roe,
-                            dividend_yield: stockData.dividend_yield
+                            dividend_yield: stockData.dividend_yield,
+                            book_value: stockData.book_value,
+                            shares_outstanding: stockData.shares_outstanding,
+                            float_shares: stockData.float_shares,
+                            enterprise_value: stockData.enterprise_value,
+                            ebitda: stockData.ebitda
                         }} />
                     )}
 

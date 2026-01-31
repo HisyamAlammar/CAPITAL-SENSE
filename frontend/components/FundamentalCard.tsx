@@ -9,6 +9,11 @@ interface Fundamentals {
     pbv_ratio?: number;
     roe?: number;
     dividend_yield?: number;
+    book_value?: number;
+    shares_outstanding?: number;
+    float_shares?: number;
+    enterprise_value?: number;
+    ebitda?: number;
 }
 
 interface FundamentalCardProps {
@@ -22,22 +27,45 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
     const pbv = data.pbv_ratio || 0;
     const divYield = (data.dividend_yield || 0) * 100;
 
-    // Determine "Health Score" (Simple Heuristic for Demo)
+    // Advanced Analysis (New Metrics)
+    // EV / EBITDA: Lower is better. < 10 is usually considered healthy/undervalued.
+    const evEbitda = (data.enterprise_value && data.ebitda) ? (data.enterprise_value / data.ebitda) : 0;
+
+    // Float Percentage: (Float / Shares Outstanding) * 100
+    const floatPct = (data.float_shares && data.shares_outstanding) ? (data.float_shares / data.shares_outstanding) * 100 : 0;
+
+    // Determine "Health Score" (Heuristic Analysis)
     let score = 0;
-    if (per > 0 && per < 15) score += 2; // Cheap
-    if (roe > 15) score += 2; // Profitable
-    if (divYield > 3) score += 1; // Good Dividend
+
+    // 1. Valuation (PER & EV/EBITDA)
+    if (per > 0 && per < 15) score += 2; // Cheap PER
+    if (evEbitda > 0 && evEbitda < 12) score += 2; // Cheap EV/EBITDA
     if (pbv < 1.5) score += 1; // Undervalued by Book Value
+
+    // 2. Profitability (ROE)
+    if (roe > 15) score += 2; // Very Profitable
+    else if (roe > 10) score += 1; // Decently Profitable
+
+    // 3. Income (Dividends)
+    if (divYield > 3) score += 1; // Good Dividend
+
+    // 4. Liquidity / Structure (Free Float)
+    if (floatPct > 7.5) score += 1; // Sufficient Public Liquidity
+
+    // Penalties
+    if (evEbitda > 30) score -= 1; // Very Expensive
+    if (per > 50) score -= 1; // Overvalued
 
     let recommendation = "NEUTRAL";
     let color = "text-yellow-400";
     let bg = "bg-yellow-400/10";
 
-    if (score >= 4) {
+    // Adjusted thresholds for max score roughly 10
+    if (score >= 6) {
         recommendation = "STRONG BUY";
         color = "text-green-400";
         bg = "bg-green-500/10";
-    } else if (score === 3) {
+    } else if (score >= 4) {
         recommendation = "BUY";
         color = "text-green-400";
         bg = "bg-green-500/10";
@@ -52,6 +80,13 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
         if (val >= 1e12) return `Rp ${(val / 1e12).toFixed(2)} T`;
         if (val >= 1e9) return `Rp ${(val / 1e9).toFixed(2)} M`;
         return `Rp ${val.toLocaleString('id-ID')}`;
+    };
+
+    const formatShares = (val: number) => {
+        if (!val) return "-";
+        if (val >= 1e9) return `${(val / 1e9).toFixed(2)} Miliar Lbr`;
+        if (val >= 1e6) return `${(val / 1e6).toFixed(2)} Juta Lbr`;
+        return `${val.toLocaleString('id-ID')} Lbr`;
     };
 
     // Reusable Metric Card with Tooltip
@@ -138,8 +173,42 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
                     label="Dividend Yield"
                     value={divYield ? divYield.toFixed(2) + "% / tahun" : "-"}
                     colSpan="col-span-2 lg:col-span-4"
-                    colorClass={divYield > 4 ? "text-green-400" : "text-white"}
                     tooltip="Persentase keuntungan tunai yang dibagikan perusahaan kepada investor setiap tahunnya (relatif terhadap harga saham)."
+                />
+
+                <MetricCard
+                    icon={Scale}
+                    label="Book Value"
+                    value={data.book_value ? formatCurrency(data.book_value) : "-"}
+                    tooltip="Nilai buku per lembar saham. Jika harga saham di bawah nilai ini, secara teoritis saham tersebut undervalued (PBV < 1)."
+                />
+
+                <MetricCard
+                    icon={PieChart}
+                    label="Shares Outstanding"
+                    value={data.shares_outstanding ? formatShares(data.shares_outstanding) : "-"}
+                    tooltip="Jumlah total saham yang beredar di pasar."
+                />
+
+                <MetricCard
+                    icon={Activity}
+                    label="Free Float"
+                    value={data.float_shares && data.shares_outstanding ? `${((data.float_shares / data.shares_outstanding) * 100).toFixed(2)}%` : "-"}
+                    tooltip="Persentase saham yang beredar di pasar publik (Masyarakat) dibandingkan total saham. Semakin besar, semakin likuid."
+                />
+
+                <MetricCard
+                    icon={DollarSign}
+                    label="Enterprise Value"
+                    value={data.enterprise_value ? formatCurrency(data.enterprise_value) : "-"}
+                    tooltip="Nilai total perusahaan jika seseorang ingin membelinya (Kapitalisasi Pasar + Utang - Kas). Lebih akurat dari Market Cap untuk valuasi akuisisi."
+                />
+
+                <MetricCard
+                    icon={Scale}
+                    label="EBITDA"
+                    value={data.ebitda ? formatCurrency(data.ebitda) : "-"}
+                    tooltip="Laba sebelum bunga, pajak, depresiasi, dan amortisasi. Indikator kinerja operasional murni."
                 />
             </div>
         </motion.div>

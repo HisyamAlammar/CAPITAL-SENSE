@@ -160,6 +160,16 @@ async def search_stock(q: str):
             change = price - prev_close if price and prev_close else 0
             change_pct = (change / prev_close) * 100 if prev_close else 0
             
+            # Normalize Sector
+            sector = info.get("sector", "Others")
+            if "Financial" in sector: sector = "Finance"
+            elif "Technology" in sector: sector = "Technology"
+            elif "Energy" in sector: sector = "Energy"
+            elif "Basic Materials" in sector: sector = "Basic Materials"
+            elif "Consumer" in sector: sector = "Consumer"
+            elif "Communication" in sector: sector = "Infrastructure"
+            elif "Industrials" in sector: sector = "Industrials"
+
             return [{
                 "symbol": query,
                 "name": info.get("longName", query),
@@ -167,7 +177,8 @@ async def search_stock(q: str):
                 "change": round(change, 2),
                 "change_pct": round(change_pct, 2),
                 "status": "up" if change_pct > 0 else "down" if change_pct < 0 else "neutral",
-                "marketCap": info.get("marketCap", 0)
+                "marketCap": info.get("marketCap", 0),
+                "sector": sector
             }]
             
     except Exception:
@@ -210,6 +221,13 @@ async def get_stock_detail(symbol: str):
             "revenue": stock.info.get("totalRevenue"),
             "net_income": stock.info.get("netIncomeToCommon"),
             
+            # Robust Data Fetching
+            "book_value": get_robust_metric(stock, "bookValue"),
+            "shares_outstanding": get_robust_shares(stock),
+            "float_shares": stock.info.get("floatShares"), # Often missing, harder to calc accurately without inside info
+            "enterprise_value": get_robust_metric(stock, "enterpriseValue"),
+            "ebitda": get_robust_metric(stock, "ebitda"),
+            
             # Gen Z "Trusted Check": Who runs this company?
             "officers": stock.info.get("companyOfficers", []),
             "website": stock.info.get("website", ""),
@@ -219,3 +237,55 @@ async def get_stock_detail(symbol: str):
         }
     except Exception as e:
         return {"error": str(e)}
+
+def get_robust_shares(stock):
+    """Fallback to fast_info for shares if info is missing"""
+    shares = stock.info.get("sharesOutstanding")
+    if not shares:
+        try:
+            # fast_info does not support .get(), use attribute or dict access
+            shares = stock.fast_info["shares"]
+        except Exception:
+            shares = None
+    return shares
+
+def get_robust_metric(stock, key):
+    """
+    Fetch a metric (Book Value, EV, EBITDA) and convert to Price currency (IDR) if needed.
+    Has specific fallbacks for EBITDA.
+    """
+    val = stock.info.get(key)
+    
+    # Specific fallback for EBITDA using income_stmt
+    if val is None and key == "ebitda":
+        try:
+            stmt = stock.income_stmt
+            if not stmt.empty:
+                # 1. Try direct keys
+                if "EBITDA" in stmt.index:
+                    val = stmt.loc["EBITDA"].iloc[0]
+                elif "Normalized EBITDA" in stmt.index:
+                    val = stmt.loc["Normalized EBITDA"].iloc[0]
+                # 2. Calculate manually: Pretax Income + Interest Expense + D&A
+                elif "Pretax Income" in stmt.index:
+                    pretax = stmt.loc["Pretax Income"].iloc[0]
+                    interest = stmt.loc["Interest Expense"].iloc[0] if "Interest Expense" in stmt.index else 0
+                    depr = stmt.loc["Reconciled Depreciation"].iloc[0] if "Reconciled Depreciation" in stmt.index else 0
+                    # For banks/finance, sometimes Interest Expense is not added back in the same way, but standard formula is EBIT + DA. 
+                    # EBIT = Pretax + Interest. 
+                    # EBITDA = Pretax + Interest + Depr.
+                    val = pretax + interest + depr
+        except Exception:
+            pass
+
+    if val is None:
+        return None
+        
+    currency = stock.info.get("currency")
+    fin_currency = stock.info.get("financialCurrency")
+    
+    # If currencies differ (e.g. IDR price but USD financials), convert.
+    if currency == "IDR" and fin_currency == "USD":
+        return val * 16500 
+    
+    return val
