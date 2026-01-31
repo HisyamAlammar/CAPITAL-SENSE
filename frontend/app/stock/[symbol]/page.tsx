@@ -122,7 +122,8 @@ export default function StockDetailPage() {
                             shares_outstanding: stockData.shares_outstanding,
                             float_shares: stockData.float_shares,
                             enterprise_value: stockData.enterprise_value,
-                            ebitda: stockData.ebitda
+                            ebitda: stockData.ebitda,
+                            share_holders: stockData.share_holders
                         }} />
                     )}
 

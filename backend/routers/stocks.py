@@ -233,10 +233,49 @@ async def get_stock_detail(symbol: str):
             "website": stock.info.get("website", ""),
             "industry": stock.info.get("industry", "Unknown"),
             "sector": stock.info.get("sector", "Unknown"),
-            "description": stock.info.get("longBusinessSummary", "No description available.")
+            "description": stock.info.get("longBusinessSummary", "No description available."),
+            
+            # Shareholders (Top Holders)
+            "share_holders": get_holders_data(stock)
         }
     except Exception as e:
         return {"error": str(e)}
+
+def get_holders_data(stock):
+    """
+    Fetch major holders (Institutional/Mutual Funds).
+    yfinance often returns these as pandas DataFrames.
+    """
+    holders = []
+    try:
+        # Try Institutional Holders
+        inst_holders = stock.institutional_holders
+        if inst_holders is not None and not inst_holders.empty:
+            # Columns usually: [Date Reported, Holder, pctHeld, Shares, Value]
+            # We standardize to: {name, shares, pct}
+            for _, row in inst_holders.iterrows():
+                 holders.append({
+                     "name": row.get("Holder", "Unknown"),
+                     "shares": row.get("Shares", 0),
+                     "date": str(row.get("Date Reported", "")),
+                     "type": "Institution"
+                 })
+                 
+        # Try Mutual Fund Holders
+        mf_holders = stock.mutualfund_holders
+        if mf_holders is not None and not mf_holders.empty:
+             for _, row in mf_holders.iterrows():
+                 holders.append({
+                     "name": row.get("Holder", "Unknown"),
+                     "shares": row.get("Shares", 0),
+                     "date": str(row.get("Date Reported", "")),
+                     "type": "Mutual Fund"
+                 })
+                 
+        # Limit to 10
+        return holders[:10]
+    except Exception:
+        return []
 
 def get_robust_shares(stock):
     """Fallback to fast_info for shares if info is missing"""

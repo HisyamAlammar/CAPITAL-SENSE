@@ -14,6 +14,7 @@ interface Fundamentals {
     float_shares?: number;
     enterprise_value?: number;
     ebitda?: number;
+    share_holders?: any[];
 }
 
 interface FundamentalCardProps {
@@ -142,12 +143,34 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
                 />
 
                 <MetricCard
+                    icon={Activity}
+                    label="Free Float"
+                    value={data.float_shares && data.shares_outstanding ? `${((data.float_shares / data.shares_outstanding) * 100).toFixed(2)}%` : "-"}
+                    tooltip="Persentase saham yang beredar di pasar publik (Masyarakat) dibandingkan total saham. Semakin besar, semakin likuid."
+                />
+
+                <MetricCard
+                    icon={PieChart}
+                    label="Shares Outstanding"
+                    value={data.shares_outstanding ? formatShares(data.shares_outstanding) : "-"}
+                    tooltip="Jumlah total saham yang beredar di pasar."
+                />
+
+                <MetricCard
                     icon={DollarSign}
-                    label="PER (Valuasi)"
-                    value={per ? per.toFixed(2) + "x" : "-"}
-                    target="Target: < 15x (Murah)"
-                    colorClass={per > 0 && per < 15 ? "text-green-400" : "text-gray-200"}
-                    tooltip="Price-to-Earnings: Membandingkan harga saham dengan laba per lembar. Semakin rendah, semakin 'murah' (undervalued)."
+                    label="Dividend Yield"
+                    value={divYield ? divYield.toFixed(2) + "% / tahun" : "-"}
+                    tooltip="Persentase keuntungan tunai yang dibagikan perusahaan kepada investor setiap tahunnya (relatif terhadap harga saham)."
+                />
+
+                {/* Row 2: Profit & Value */}
+                <MetricCard
+                    icon={Activity}
+                    label="ROE (Profit)"
+                    value={roe ? roe.toFixed(1) + "%" : "-"}
+                    target="Target: > 15% (Profitable)"
+                    colorClass={roe > 15 ? "text-green-400" : "text-gray-200"}
+                    tooltip="Return on Equity: Seberapa efisien perusahaan menghasilkan laba dari modal pemegang saham. Di atas 15% sangat bagus."
                 />
 
                 <MetricCard
@@ -160,41 +183,10 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
                 />
 
                 <MetricCard
-                    icon={Activity}
-                    label="ROE (Profit)"
-                    value={roe ? roe.toFixed(1) + "%" : "-"}
-                    target="Target: > 15% (Profitable)"
-                    colorClass={roe > 15 ? "text-green-400" : "text-gray-200"}
-                    tooltip="Return on Equity: Seberapa efisien perusahaan menghasilkan laba dari modal pemegang saham. Di atas 15% sangat bagus."
-                />
-
-                <MetricCard
-                    icon={DollarSign}
-                    label="Dividend Yield"
-                    value={divYield ? divYield.toFixed(2) + "% / tahun" : "-"}
-                    colSpan="col-span-2 lg:col-span-4"
-                    tooltip="Persentase keuntungan tunai yang dibagikan perusahaan kepada investor setiap tahunnya (relatif terhadap harga saham)."
-                />
-
-                <MetricCard
                     icon={Scale}
                     label="Book Value"
                     value={data.book_value ? formatCurrency(data.book_value) : "-"}
                     tooltip="Nilai buku per lembar saham. Jika harga saham di bawah nilai ini, secara teoritis saham tersebut undervalued (PBV < 1)."
-                />
-
-                <MetricCard
-                    icon={PieChart}
-                    label="Shares Outstanding"
-                    value={data.shares_outstanding ? formatShares(data.shares_outstanding) : "-"}
-                    tooltip="Jumlah total saham yang beredar di pasar."
-                />
-
-                <MetricCard
-                    icon={Activity}
-                    label="Free Float"
-                    value={data.float_shares && data.shares_outstanding ? `${((data.float_shares / data.shares_outstanding) * 100).toFixed(2)}%` : "-"}
-                    tooltip="Persentase saham yang beredar di pasar publik (Masyarakat) dibandingkan total saham. Semakin besar, semakin likuid."
                 />
 
                 <MetricCard
@@ -204,13 +196,70 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
                     tooltip="Nilai total perusahaan jika seseorang ingin membelinya (Kapitalisasi Pasar + Utang - Kas). Lebih akurat dari Market Cap untuk valuasi akuisisi."
                 />
 
+                {/* Row 3: Valuation Deep Dive */}
                 <MetricCard
                     icon={Scale}
                     label="EBITDA"
                     value={data.ebitda ? formatCurrency(data.ebitda) : "-"}
                     tooltip="Laba sebelum bunga, pajak, depresiasi, dan amortisasi. Indikator kinerja operasional murni."
                 />
+
+                <MetricCard
+                    icon={DollarSign}
+                    label="PER (Valuasi)"
+                    value={per ? per.toFixed(2) + "x" : "-"}
+                    target="Target: < 15x (Murah)"
+                    colorClass={per > 0 && per < 15 ? "text-green-400" : "text-gray-200"}
+                    colSpan="lg:col-span-3"
+                    tooltip="Price-to-Earnings: Membandingkan harga saham dengan laba per lembar. Semakin rendah, semakin 'murah' (undervalued)."
+                />
             </div>
+
+            {/* Top Shareholders (Big Money Flow) Section */}
+            {data.share_holders && data.share_holders.length > 0 && (
+                <div className="mt-8 border-t border-white/5 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                            <TrendingUp size={18} className="text-blue-400" /> Big Money Flow (Institusi & Asing)
+                        </h3>
+                        <div className="px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[10px] text-blue-300">
+                            Smart Money Indicator
+                        </div>
+                    </div>
+
+                    <p className="text-xs text-gray-500 mb-4 bg-white/5 p-3 rounded-lg border border-white/5">
+                        <Info size={12} className="inline mr-1 mb-0.5" />
+                        Data ini menampilkan kepemilikan oleh <strong>Institusi Besar (Big Fund)</strong>.
+                        Kehadiran nama-nama besar (seperti Vanguard, Blackrock) menunjukkan validitas fundamental dan kepercayaan investor global ("Foreign Flow").
+                    </p>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-white/5 text-gray-400 uppercase text-xs">
+                                <tr>
+                                    <th className="px-4 py-3 rounded-l-lg">Holder Name</th>
+                                    <th className="px-4 py-3">Type</th>
+                                    <th className="px-4 py-3">Shares</th>
+                                    <th className="px-4 py-3 rounded-r-lg">Report Date</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {data.share_holders.map((holder: any, idx: number) => (
+                                    <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-4 py-3 font-medium text-white">{holder.name}</td>
+                                        <td className="px-4 py-3 text-cyan-400 text-xs">
+                                            {holder.type === 'Institution' ? 'Institusi' :
+                                                holder.type === 'Mutual Fund' ? 'Reksa Dana Global' : holder.type}
+                                        </td>
+                                        <td className="px-4 py-3">{formatShares(holder.shares)}</td>
+                                        <td className="px-4 py-3 text-gray-500 text-xs">{new Date(holder.date).toLocaleDateString("id-ID")}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }
