@@ -6,17 +6,70 @@ router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
 # List of popular Indonesian stocks (Blue Chip / LQ45 subset)
 # Expanded list for better Gainers/Losers demo
+# List of popular Indonesian stocks (Blue Chip / LQ45 subset)
+# Expanded list for better Gainers/Losers demo & Filtering
 POPULAR_TICKERS = [
-    "BBCA.JK", "BBRI.JK", "BMRI.JK", "TLKM.JK", "ASII.JK",
-    "UNVR.JK", "GOTO.JK", "ADRO.JK", "BBNI.JK", "ANTM.JK",
-    "ICBP.JK", "KLBF.JK", "PGAS.JK", "PTBA.JK", "UNTR.JK",
-    "AMRT.JK", "BUKA.JK", "EMTK.JK", "ARTO.JK", "TINS.JK"
+    # Finance
+    "BBCA.JK", "BBRI.JK", "BMRI.JK", "BBNI.JK", "ARTO.JK", "BRIS.JK",
+    # Tech
+    "GOTO.JK", "EMTK.JK", "BUKA.JK", "DCII.JK",
+    # Energy & Mining
+    "ADRO.JK", "PGAS.JK", "PTBA.JK", "ANTM.JK", "TINS.JK", "INCO.JK", "MEDC.JK",
+    # Consumer
+    "UNVR.JK", "ICBP.JK", "INDF.JK", "AMRT.JK", "MYOR.JK", "KLBF.JK",
+    # Infra & Telco
+    "TLKM.JK", "ISAT.JK", "EXCL.JK", "JSMR.JK",
+    # Auto & Heavy
+    "ASII.JK", "UNTR.JK"
 ]
+
+# Second Liners / Potential Hidden Gems (Mid-Small Cap)
+SMALL_CAP_TICKERS = [
+    "CLEO.JK", "MYOH.JK", "WOOD.JK", "MARK.JK", "SIDO.JK", 
+    "ERAA.JK", "PANI.JK", "DOID.JK", "HRUM.JK", "GJTL.JK", 
+    "AUTO.JK", "DRMA.JK", "MAPA.JK", "ACES.JK", "ELSA.JK"
+]
+
+@router.get("/ihsg")
+async def get_ihsg_data():
+    """
+    Get IHSG (Indeks Harga Saham Gabungan) data: current price and history.
+    """
+    try:
+        ihsg = yf.Ticker("^JKSE")
+        
+        # Get history for chart (3 months is good for general trend)
+        hist = ihsg.history(period="3mo")
+        history_data = []
+        for date, row in hist.iterrows():
+            history_data.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "value": row["Close"]
+            })
+            
+        # Get current info (fallback to last history if info unavailable)
+        info = ihsg.info
+        current_price = info.get("regularMarketPrice") or hist["Close"].iloc[-1]
+        prev_close = info.get("previousClose") or hist["Close"].iloc[-2] if len(hist) > 1 else current_price
+        
+        change = current_price - prev_close
+        change_pct = (change / prev_close) * 100
+        
+        return {
+            "symbol": "IHSG",
+            "name": "Indeks Harga Saham Gabungan",
+            "price": current_price,
+            "change": round(change, 2),
+            "change_pct": round(change_pct, 2),
+            "history": history_data
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 @router.get("/")
 async def get_market_summary():
     """
-    Get summary of popular stocks including current price, daily change, and market cap.
+    Get summary of popular stocks including current price, daily change, market cap, and SECTOR.
     """
     data = []
     tickers_str = " ".join(POPULAR_TICKERS)
@@ -25,7 +78,13 @@ async def get_market_summary():
         stocks = yf.Tickers(tickers_str)
         
         for ticker in POPULAR_TICKERS:
-            info = stocks.tickers[ticker].info
+            # Accessing .info for many tickers via yf.Tickers might be slow or hit/miss in one go
+            # But yf.Tickers attempts to batch.
+            try:
+                info = stocks.tickers[ticker].info
+            except:
+                continue
+                
             if not info: continue
                 
             price = info.get("currentPrice") or info.get("regularMarketPrice")
@@ -39,6 +98,17 @@ async def get_market_summary():
                 if change_pct > 0: status = "up"
                 elif change_pct < 0: status = "down"
                 
+                # Normalize Sector
+                sector = info.get("sector", "Others")
+                # Simplify sector names for simpler filtering if needed
+                if "Financial" in sector: sector = "Finance"
+                elif "Technology" in sector: sector = "Technology"
+                elif "Energy" in sector: sector = "Energy"
+                elif "Basic Materials" in sector: sector = "Basic Materials"
+                elif "Consumer" in sector: sector = "Consumer"
+                elif "Communication" in sector: sector = "Infrastructure"
+                elif "Industrials" in sector: sector = "Industrials"
+                
                 data.append({
                     "symbol": ticker.replace(".JK", ""),
                     "name": info.get("longName", ticker),
@@ -47,7 +117,8 @@ async def get_market_summary():
                     "change_pct": round(change_pct, 2),
                     "status": status,
                     "volume": info.get("volume", 0),
-                    "marketCap": info.get("marketCap", 0)
+                    "marketCap": info.get("marketCap", 0),
+                    "sector": sector
                 })
                 
         # Sort by change percentage (descending) by default

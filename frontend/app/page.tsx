@@ -1,12 +1,16 @@
 import HeroSection from '@/components/HeroSection';
 import StockDashboard from '@/components/StockDashboard';
 import NewsFeed from '@/components/NewsFeed';
+import MarketIndexChart from '@/components/MarketIndexChart';
 import { BookOpen, TrendingUp, AlertTriangle, PieChart } from 'lucide-react';
 
 export default function Home() {
   return (
     <main className="min-h-screen relative z-10">
       <HeroSection />
+
+      {/* IHSG Market Overview */}
+      <MarketIndexChart />
 
       {/* 4 Top Movers Only, No Search/Tabs */}
       <StockDashboard simpleView={true} />

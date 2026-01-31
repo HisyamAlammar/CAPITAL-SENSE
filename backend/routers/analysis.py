@@ -143,12 +143,93 @@ async def get_stock_prediction(symbol: str):
                 "sentiment": f"{'BULLISH' if sent_score > 0 else 'BEARISH' if sent_score < 0 else 'NEUTRAL'} ({', '.join(sent_reasons)})",
                 "ma_5": round(ma5, 0),
                 "ma_20": round(ma20, 0)
-            }
+            },
+            "market_cap": info.get("marketCap", 0)
         }
         
     except Exception as e:
         print(f"Error in prediction: {e}")
         return {"error": str(e)}
+
+@router.get("/top-picks")
+async def get_top_picks():
+    """
+    Scans stocks to find 'Hidden Gems' (Strong Buy) and 'Red Flags' (Strong Sell).
+    Optimized for speed using asyncio.gather.
+    Returns top 6 of each category.
+    """
+    import random
+    import asyncio
+    from routers.stocks import POPULAR_TICKERS, SMALL_CAP_TICKERS
+    
+    # 1. Prepare Sample List (Big Caps + Small Caps)
+    # We want a mix to ensure we find "Very Hidden Gems"
+    big_caps = random.sample([t.replace(".JK", "") for t in POPULAR_TICKERS], 12)
+    small_caps = random.sample([t.replace(".JK", "") for t in SMALL_CAP_TICKERS], 8)
+    all_tickers = big_caps + small_caps
+    random.shuffle(all_tickers)
+    
+    # 2. Parallel Execution (SPEED UP!)
+    # Instead of awaiting one by one, we launch all tasks and await them together.
+    tasks = [get_stock_prediction(symbol) for symbol in all_tickers]
+    results_raw = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # 3. Filter valid results
+    results = []
+    for r in results_raw:
+        if isinstance(r, dict) and "error" not in r:
+            results.append(r)
+            
+    # Sorting helpers
+    def get_score(item):
+        conf = int(item['confidence'].replace('%', ''))
+        # 3=StrongBuy, 2=Buy, 1=Hold, -1=Sell, -2=StrongSell
+        label = item['prediction']
+        score = 0
+        if "STRONG BUY" in label: score = 3
+        elif "BUY" in label: score = 2
+        elif "STRONG SELL" in label: score = -2
+        elif "SELL" in label: score = -1
+        return (score, conf)
+
+    # Separate Lists
+    buys = [r for r in results if "BUY" in r['prediction']]
+    sells = [r for r in results if "SELL" in r['prediction']] 
+    
+    # 3. Very Hidden Gems: Market Cap < 10 Trillion AND (Strong Buy OR Buy)
+    HIDDEN_GEM_CAP = 10 * 1_000_000_000_000
+    very_hidden_gems = [r for r in buys if r.get('market_cap', 0) < HIDDEN_GEM_CAP]
+    
+    # Sort Buys: Highest Score & Confidence first
+    buys.sort(key=get_score, reverse=True)
+    
+    # Sort Hidden Gems
+    very_hidden_gems.sort(key=get_score, reverse=True)
+    
+    # Sort Sells: Lowest Score (Most negative) & Highest Confidence first
+    sells.sort(key=lambda x: (get_score(x)[0], -get_score(x)[1])) 
+
+    return {
+        "buys": buys[:6],
+        "sells": sells[:6],
+        "hidden_gems": very_hidden_gems[:6]
+    }
+
+@router.get("/ipo-rumors")
+async def get_ipo_rumors():
+    """
+    Fetch news related to potential IPOs or upcoming listings.
+    """
+    from news_service import fetch_google_news
+    
+    # Search for IPO specific keywords
+    # "Rencana IPO", "Segera Melantai", "Bursa Efek Indonesia IPO"
+    ipo_news = fetch_google_news("Rencana IPO Saham Indonesia", limit=6)
+    
+    # Filter only relevant results (optional, but good for quality)
+    filtered = [n for n in ipo_news if "IPO" in n['title'].upper() or "SAHAM" in n['title'].upper()]
+    
+    return filtered[:4]
 
 @router.get("/recap")
 async def get_daily_recap():
@@ -176,13 +257,40 @@ async def get_daily_recap():
         sentiment_score = pos - neg
         
         # 3. Key Topics (Most frequent words in titles)
-        all_text = " ".join([a.title for a in articles]).lower()
-        words = re.findall(r'\w+', all_text)
-        ignored = ["di", "ke", "dan", "yang", "ini", "itu", "saham", "untuk", "pt", "tbk", "indonesia", "dengan", "akan", "pada", "market", "bursa", "news", "hari", "juta", "miliar", "triliun", "rp"]
-        keywords = [w for w in words if w not in ignored and len(w) > 3]
-        top_topics = Counter(keywords).most_common(3)
-        # Custom formatting: IHSG capitalized, others Title Case
-        topic_str = ", ".join([t[0].upper() if t[0].lower() == 'ihsg' else t[0].title() for t in top_topics])
+        # 3. Key Topics (Prioritize Tickers & Indices)
+        all_text = " ".join([a.title for a in articles]) # keep case for Ticker detection
+        
+        # Define Tickers of Interest (Local copy to avoid circular import issues)
+        INTERESTING_TICKERS = [
+            "BBCA", "BBRI", "BMRI", "BBNI", "ARTO", "BRIS", "GOTO", "EMTK", "BUKA", "DCII", 
+            "ADRO", "PGAS", "PTBA", "ANTM", "TINS", "INCO", "MEDC", "UNVR", "ICBP", "INDF", 
+            "AMRT", "MYOR", "KLBF", "TLKM", "ISAT", "EXCL", "JSMR", "ASii", "UNTR", "IHSG",
+            "BREN", "TPIA", "BYAN" # Add some heavyweights
+        ]
+        
+        # 1st Pass: Look for Tickers
+        found_tickers = []
+        for word in all_text.split():
+            clean_word = re.sub(r'\W+', '', word).upper()
+            if clean_word in INTERESTING_TICKERS:
+                found_tickers.append(clean_word)
+        
+        if found_tickers:
+            # If tickers found, use the most common one
+            top_topics = Counter(found_tickers).most_common(3)
+            topic_str = ", ".join([t[0] for t in top_topics])
+        else:
+            # Fallback to Generic Keywords
+            words = re.findall(r'\w+', all_text.lower())
+            ignored = [
+                "di", "ke", "dan", "yang", "ini", "itu", "saham", "untuk", "pt", "tbk", "indonesia", "dengan", "akan", "pada", 
+                "market", "bursa", "news", "hari", "juta", "miliar", "triliun", "rp", "persen", "naik", "turun", "stagnan",
+                "sesi", "pagi", "siang", "sore", "penutupan", "pembukaan", "transaksi", "investor", "asing", "dana",
+                "rekomendasi", "target", "harga", "potensi", "proyeksi", "prediksi", "jadwal", "dividen", "rups", "ipo"
+            ]
+            keywords = [w for w in words if w not in ignored and len(w) > 3 and not w.isdigit()]
+            top_topics = Counter(keywords).most_common(1)
+            topic_str = top_topics[0][0].title() if top_topics else "Ekonomi Global"
         
         # 4. Top Stock (Most mentioned)
         stock_counts = Counter([a.related_stock for a in articles if a.related_stock != "Global"])

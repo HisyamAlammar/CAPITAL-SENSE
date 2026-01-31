@@ -88,7 +88,8 @@ def fetch_google_news(query: str, limit: int = 10):
     rss_url = f"https://news.google.com/rss/search?q={query}&hl=id&gl=ID&ceid=ID:id"
     
     try:
-        response = requests.get(rss_url, timeout=10)
+        # Reduced timeout to 3s to fail fast on network issues
+        response = requests.get(rss_url, timeout=3.0)
         root = ET.fromstring(response.content)
         articles = []
         
@@ -123,7 +124,8 @@ def fetch_google_news(query: str, limit: int = 10):
             
         return articles
     except Exception as e:
-        print(f"Error fetching news: {e}")
+        print(f"Error fetching news for {query}: {e}")
+        # Return empty list to degrade gracefully (Analysis will assume NEUTRAL)
         return []
 
 def save_articles_to_db(db: Session, articles: list, related_stock: str = "Global"):
