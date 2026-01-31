@@ -235,6 +235,13 @@ async def get_stock_detail(symbol: str):
             "sector": stock.info.get("sector", "Unknown"),
             "description": stock.info.get("longBusinessSummary", "No description available."),
             
+            # Stock Identity Enhancements
+            "fifty_two_week_high": stock.info.get("fiftyTwoWeekHigh"),
+            "fifty_two_week_low": stock.info.get("fiftyTwoWeekLow"),
+            "average_volume": stock.info.get("averageVolume"),  # 30-day average
+            "beta": stock.info.get("beta"),
+            "ipo_date": stock.info.get("firstTradeDateEpochUtc"),  # Unix timestamp
+            
             # Shareholders (Top Holders)
             "share_holders": get_holders_data(stock)
         }

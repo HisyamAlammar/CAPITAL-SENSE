@@ -69,6 +69,88 @@ export default function StockDetailPage() {
                             Sektor: {stockData.sector}
                         </div>
                     )}
+
+                    {/* Stock Identity Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mt-4">
+                        {/* Industry */}
+                        {stockData?.industry && (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/5 text-xs">
+                                <span className="text-gray-400">Industri:</span>
+                                <span className="text-purple-300 font-medium">{stockData.industry}</span>
+                            </div>
+                        )}
+
+                        {/* Beta */}
+                        {stockData?.beta && (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/5 text-xs">
+                                <span className="text-gray-400">⚡ Beta:</span>
+                                <span className={`font-medium ${stockData.beta > 1.5 ? 'text-red-300' : stockData.beta > 1 ? 'text-yellow-300' : 'text-green-300'}`}>
+                                    {stockData.beta.toFixed(2)}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Average Volume */}
+                        {stockData?.average_volume && (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/5 text-xs">
+                                <span className="text-gray-400">📊 Vol:</span>
+                                <span className="text-blue-300 font-medium">
+                                    {stockData.average_volume >= 1e6 ? `${(stockData.average_volume / 1e6).toFixed(1)}M` : `${(stockData.average_volume / 1e3).toFixed(0)}K`}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* IPO Date */}
+                        {stockData?.ipo_date && (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/5 text-xs">
+                                <span className="text-gray-400">📅 IPO:</span>
+                                <span className="text-pink-300 font-medium">
+                                    {new Date(stockData.ipo_date * 1000).getFullYear()}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Website */}
+                        {stockData?.website && (
+                            <a
+                                href={stockData.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/5 text-xs hover:bg-white/20 transition-colors group"
+                            >
+                                <span className="text-gray-400">🔗</span>
+                                <span className="text-cyan-300 font-medium group-hover:text-cyan-200">Website</span>
+                            </a>
+                        )}
+                    </div>
+
+                    {/* 52-Week Range Bar */}
+                    {stockData?.fifty_two_week_low && stockData?.fifty_two_week_high && prediction?.price && (
+                        <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/5">
+                            <div className="flex justify-between items-center mb-2 text-xs">
+                                <span className="text-gray-400">52-Week Range</span>
+                                <span className="text-gray-500">
+                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(stockData.fifty_two_week_low)} - {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(stockData.fifty_two_week_high)}
+                                </span>
+                            </div>
+                            <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 opacity-50"></div>
+                                <div
+                                    className="absolute top-0 h-full w-1 bg-white shadow-lg shadow-white/50"
+                                    style={{
+                                        left: `${((prediction.price - stockData.fifty_two_week_low) / (stockData.fifty_two_week_high - stockData.fifty_two_week_low)) * 100}%`
+                                    }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between items-center mt-1 text-[10px]">
+                                <span className="text-red-400">Low</span>
+                                <span className="text-white font-bold">
+                                    Saat ini: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(prediction.price)}
+                                </span>
+                                <span className="text-green-400">High</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="text-right">
