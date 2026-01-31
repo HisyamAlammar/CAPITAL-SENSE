@@ -19,6 +19,17 @@ export default function StockDetailPage() {
     const [news, setNews] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showProjection, setShowProjection] = useState(false);
+    const [selectedTimeframe, setSelectedTimeframe] = useState<string>("3m");
+
+    // Fetch prediction with timeframe
+    const fetchPrediction = async (timeframe: string) => {
+        try {
+            const predRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/analysis/prediction/${symbol}?timeframe=${timeframe}`);
+            setPrediction(predRes.data);
+        } catch (error) {
+            console.error("Error fetching prediction", error);
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -27,12 +38,10 @@ export default function StockDetailPage() {
                 const stockRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/stocks/${symbol}`);
                 setStockData(stockRes.data);
 
-                // 2. Get Prediction
-                const predRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/analysis/prediction/${symbol}`);
-                setPrediction(predRes.data);
+                // 2. Get Prediction (default 3m)
+                await fetchPrediction(selectedTimeframe);
 
                 // 3. Get Related News
-                // We use the full company name or symbol for better search results
                 const query = stockRes.data.info?.longName || symbol;
                 const newsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/news/?q=${query}`);
                 setNews(newsRes.data);
@@ -46,6 +55,13 @@ export default function StockDetailPage() {
 
         if (symbol) fetchData();
     }, [symbol]);
+
+    // Update prediction when timeframe changes
+    useEffect(() => {
+        if (symbol && !loading) {
+            fetchPrediction(selectedTimeframe);
+        }
+    }, [selectedTimeframe]);
 
     if (loading) return <div className="min-h-screen flex items-center justify-center text-cyan-400">Loading Intelligence...</div>;
 
@@ -176,7 +192,7 @@ export default function StockDetailPage() {
                                 onClick={() => setShowProjection(true)}
                                 className="text-xs flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors border-b border-cyan-400/30 pb-0.5"
                             >
-                                <TrendingUp size={14} /> Intip Proyeksi 3 Bulan
+                                <TrendingUp size={14} /> Intip Proyeksi
                             </button>
                         </div>
                     )}
@@ -315,8 +331,25 @@ export default function StockDetailPage() {
                         <button onClick={() => setShowProjection(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
 
                         <h3 className="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-400">
-                            Proyeksi Pasar (3 Bulan)
+                            Proyeksi Pasar ({prediction?.timeframe || "3 Bulan"})
                         </h3>
+
+                        {/* Timeframe Toggle */}
+                        <div className="flex gap-2 mb-4">
+                            {["1m", "3m", "6m"].map((tf) => (
+                                <button
+                                    key={tf}
+                                    onClick={() => setSelectedTimeframe(tf)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedTimeframe === tf
+                                            ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/50"
+                                            : "bg-white/5 text-gray-400 hover:bg-white/10"
+                                        }`}
+                                >
+                                    {tf === "1m" ? "1 Bulan" : tf === "3m" ? "3 Bulan" : "6 Bulan"}
+                                </button>
+                            ))}
+                        </div>
+
                         <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg text-xs text-yellow-200 mb-6">
                             ⚠️ Disclaimer: Ini hasil simulasi AI ya, bukan dukun! Tetap Do Your Own Research (DYOR) sebelum beli/jual.
                         </div>

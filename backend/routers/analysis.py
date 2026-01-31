@@ -6,12 +6,16 @@ from news_service import analyze_sentiment_bert
 router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
 @router.get("/prediction/{symbol}")
-async def get_stock_prediction(symbol: str):
+async def get_stock_prediction(symbol: str, timeframe: str = "3m"):
     """
     Generate Advanced AI Prediction based on 3 Pillars:
     1. Technical (Trend, MA)
     2. Fundamental (Valuation, Profitability)
     3. Sentiment (News, Market Mood)
+    
+    Args:
+        symbol: Stock ticker (e.g., BBCA)
+        timeframe: Projection timeframe - "1m", "3m", or "6m" (default: "3m")
     """
     ticker = f"{symbol.upper()}.JK"
     
@@ -115,21 +119,34 @@ async def get_stock_prediction(symbol: str):
             prediction = "HOLD"
             direction = "SIDEWAYS"
             
-        # AI Price Projection (3 Months)
-        # Logic: Current * (100% + (Score/MaxScore * VolatilityFactor))
-        volatility = 0.15 # Assume 15% volatility cap for 3 months
+        # AI Price Projection (Dynamic Timeframe)
+        # Volatility mapping based on timeframe
+        volatility_map = {
+            "1m": 0.05,   # 5% for 1 month
+            "3m": 0.15,   # 15% for 3 months (default)
+            "6m": 0.25    # 25% for 6 months
+        }
+        
+        # Get volatility, default to 3m if invalid timeframe
+        volatility = volatility_map.get(timeframe, 0.15)
         
         if direction == "UP":
             projected_change = (total_score / max_score) * volatility
         elif direction == "DOWN":
-            projected_change = (total_score / max_score) * volatility # total_score is low/neg, so this works if formalized
             # To be safe for neg scores:
             if total_score > 0: projected_change = 0.02
-            else: projected_change = -0.05 # Fallback
+            else: projected_change = -(volatility / 3)  # Proportional downside
         else:
             projected_change = 0.02 # Slight inflation adjustment for Hold
             
         projected_price = current_price * (1 + projected_change)
+        
+        # Timeframe label for response
+        timeframe_label = {
+            "1m": "1 Bulan",
+            "3m": "3 Bulan",
+            "6m": "6 Bulan"
+        }.get(timeframe, "3 Bulan")
 
         return {
             "symbol": symbol.upper(),
@@ -137,6 +154,7 @@ async def get_stock_prediction(symbol: str):
             "prediction": prediction,
             "confidence": f"{int(confidence)}%",
             "target_price": int(projected_price),
+            "timeframe": timeframe_label,
             "signals": {
                 "technical": f"{tech_signal} ({', '.join(tech_reasons)})",
                 "fundamental": f"{fund_signal} ({', '.join(fund_reasons)})",
