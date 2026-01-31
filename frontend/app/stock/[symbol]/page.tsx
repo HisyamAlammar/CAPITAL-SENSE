@@ -55,7 +55,7 @@ export default function StockDetailPage() {
                 <div className="p-2 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors">
                     <ArrowLeft size={20} />
                 </div>
-                <span className="font-medium">Kembali ke Market</span>
+                <span className="font-medium">Balik ke Dashboard</span>
             </Link>
 
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4 max-w-7xl mx-auto">
@@ -63,7 +63,12 @@ export default function StockDetailPage() {
                     <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-600 mb-2">
                         {symbol}
                     </h1>
-                    <p className="text-xl text-gray-400">{stockData?.info?.longName}</p>
+                    <p className="text-xl text-gray-400 mb-3">{stockData?.info?.longName}</p>
+                    {stockData?.sector && (
+                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/5 text-sm text-cyan-300">
+                            Sektor: {stockData.sector}
+                        </div>
+                    )}
                 </div>
 
                 <div className="text-right">
@@ -89,7 +94,7 @@ export default function StockDetailPage() {
                                 onClick={() => setShowProjection(true)}
                                 className="text-xs flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors border-b border-cyan-400/30 pb-0.5"
                             >
-                                <TrendingUp size={14} /> Lihat Proyeksi 3 Bulan
+                                <TrendingUp size={14} /> Intip Proyeksi 3 Bulan
                             </button>
                         </div>
                     )}
@@ -106,7 +111,7 @@ export default function StockDetailPage() {
                         {stockData?.history?.length > 0 ? (
                             <StockChart data={stockData.history} />
                         ) : (
-                            <div className="text-gray-500 flex items-center justify-center h-full">Data Chart Tidak Tersedia</div>
+                            <div className="text-gray-500 flex items-center justify-center h-full">Yah, Data Chart Kosong...</div>
                         )}
                     </div>
 
@@ -130,12 +135,12 @@ export default function StockDetailPage() {
                     {/* Analysis Box */}
                     <div className="glass-panel p-6 rounded-3xl">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                            <AlertCircle size={20} className="text-purple-400" /> Analisis Smart AI (3 Pillar)
+                            <AlertCircle size={20} className="text-purple-400" /> Kata AI Pintar (3 Pillar)
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             {/* Technical */}
                             <div className="bg-white/5 p-4 rounded-xl">
-                                <span className="text-gray-400 block mb-1">Teknikal (Tren)</span>
+                                <span className="text-gray-400 block mb-1">Teknikal (Tren Harga)</span>
                                 <span className={`text-lg font-bold ${prediction?.signals?.technical?.includes('BULLISH') ? 'text-green-400' : prediction?.signals?.technical?.includes('BEARISH') ? 'text-red-400' : 'text-gray-200'}`}>
                                     {prediction?.signals?.technical?.split('(')[0] || 'NEUTRAL'}
                                 </span>
@@ -157,7 +162,7 @@ export default function StockDetailPage() {
 
                             {/* Sentiment */}
                             <div className="bg-white/5 p-4 rounded-xl">
-                                <span className="text-gray-400 block mb-1">Sentimen Berita</span>
+                                <span className="text-gray-400 block mb-1">Apa Kata Berita?</span>
                                 <span className={`text-lg font-bold ${prediction?.signals?.sentiment?.includes('BULLISH') ? 'text-green-400' : prediction?.signals?.sentiment?.includes('BEARISH') ? 'text-red-400' : 'text-gray-200'}`}>
                                     {prediction?.signals?.sentiment?.split('(')[0] || 'NEUTRAL'}
                                 </span>
@@ -168,7 +173,7 @@ export default function StockDetailPage() {
 
                             {/* Summary */}
                             <div className="bg-white/5 p-4 rounded-xl flex items-center justify-between">
-                                <span className="text-gray-400">Confidence Score</span>
+                                <span className="text-gray-400">Tingkat Keyakinan AI</span>
                                 <span className="text-2xl font-bold text-cyan-400">{prediction?.confidence}</span>
                             </div>
                         </div>
@@ -211,7 +216,7 @@ export default function StockDetailPage() {
                                 )}
                             </motion.a>
                         ))}
-                        {news.length === 0 && <p className="text-gray-500 text-sm">Tidak ada berita spesifik ditemukan.</p>}
+                        {news.length === 0 && <p className="text-gray-500 text-sm">Belum ada berita yang pas nih.</p>}
                     </div>
                 </div>
             </div>
@@ -231,7 +236,7 @@ export default function StockDetailPage() {
                             Proyeksi Pasar (3 Bulan)
                         </h3>
                         <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg text-xs text-yellow-200 mb-6">
-                            ⚠️ Disclaimer: Proyeksi ini adalah simulasi AI berdasarkan Tren, Valuasi, dan Sentimen. Bukan saran finansial pasti.
+                            ⚠️ Disclaimer: Ini hasil simulasi AI ya, bukan dukun! Tetap Do Your Own Research (DYOR) sebelum beli/jual.
                         </div>
 
                         <div className="space-y-6">
