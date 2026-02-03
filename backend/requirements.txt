@@ -6,8 +6,9 @@ beautifulsoup4
 textblob
 nltk
 pandas
-torch
-transformers
 scipy
 apscheduler
 sqlalchemy
+transformers
+# CPU-only PyTorch to save space (crucial for Railway free tier)
+torch --index-url https://download.pytorch.org/whl/cpu
