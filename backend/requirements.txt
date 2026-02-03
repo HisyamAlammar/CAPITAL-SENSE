@@ -9,6 +9,5 @@ pandas
 scipy
 apscheduler
 sqlalchemy
-transformers
-# CPU-only PyTorch to save space (crucial for Railway free tier)
-torch --index-url https://download.pytorch.org/whl/cpu
+# transformers (Commented out for Railway Free Tier - 8GB limit)
+# torch --index-url https://download.pytorch.org/whl/cpu (Commented out, too large)

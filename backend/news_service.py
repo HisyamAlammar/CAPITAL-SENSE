@@ -1,11 +1,18 @@
 import requests
 import xml.etree.ElementTree as ET
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
+try:
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    import torch
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    print("⚠️ Transformers/PyTorch not found. Using lightweight keyword/TextBlob analysis.")
+
 import re
 from datetime import datetime
 from sqlalchemy.orm import Session
 from database import NewsArticle
+from textblob import TextBlob
 
 # --- AI Configuration ---
 MODEL_NAME = "w11wo/indonesian-roberta-base-sentiment-classifier"
@@ -25,6 +32,9 @@ NEGATIVE_KEYWORDS = [
 
 def load_ai_model():
     global tokenizer, model
+    if not TRANSFORMERS_AVAILABLE:
+        return
+
     if model is None:
         print("🤖 Loading AI Model (Indonesian RoBERTa)...")
         try:
@@ -37,7 +47,7 @@ def load_ai_model():
 def analyze_sentiment_bert(text):
     text_lower = text.lower()
     
-    # 1. PRIORITY: Check Keywords First
+    # 1. PRIORITY: Check Keywords First (Fast & Effective)
     for word in POSITIVE_KEYWORDS:
         if word in text_lower:
             return {"label": "POSITIVE", "score": 0.95}
@@ -45,44 +55,47 @@ def analyze_sentiment_bert(text):
         if word in text_lower:
             return {"label": "NEGATIVE", "score": 0.95}
 
-    # 2. SECONDARY: Use AI Model
-    if not model or not tokenizer:
-        return {"label": "NEUTRAL", "score": 0.0}
-
-    try:
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-        with torch.no_grad():
-            output = model(**inputs)
-        
-        scores = output.logits[0].softmax(dim=0).numpy()
-        labels = model.config.id2label
-        
-        ranking = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
-        top_label_id = ranking[0]
-        
-        # Robust label extraction
-        top_label_str = "NEUTRAL"
-        if isinstance(labels, dict):
-            top_label_str = str(labels.get(top_label_id, "NEUTRAL")).upper()
-        else:
-             top_label_str = "NEUTRAL"
-
-        confidence = float(scores[top_label_id])
-        
-        final_label = "NEUTRAL"
-        if "POSITIVE" in top_label_str or "LABEL_2" in top_label_str: 
-            final_label = "POSITIVE"
-        elif "NEGATIVE" in top_label_str or "LABEL_0" in top_label_str:
-            final_label = "NEGATIVE"
-        elif "NEUTRAL" in top_label_str or "LABEL_1" in top_label_str:
-            final_label = "NEUTRAL"
+    # 2. SECONDARY: Use AI Model (if available)
+    if TRANSFORMERS_AVAILABLE and model and tokenizer:
+        try:
+            inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+            with torch.no_grad():
+                output = model(**inputs)
             
-        sentiment_score = confidence if final_label == "POSITIVE" else -confidence if final_label == "NEGATIVE" else 0
-        return {"label": final_label, "score": sentiment_score}
-        
-    except Exception as e:
-        print(f"AI Error: {e}")
-        return {"label": "NEUTRAL", "score": 0.0}
+            scores = output.logits[0].softmax(dim=0).numpy()
+            labels = model.config.id2label
+            
+            ranking = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
+            top_label_id = ranking[0]
+            
+            # Robust label extraction
+            top_label_str = "NEUTRAL"
+            if isinstance(labels, dict):
+                top_label_str = str(labels.get(top_label_id, "NEUTRAL")).upper()
+            else:
+                top_label_str = "NEUTRAL"
+
+            confidence = float(scores[top_label_id])
+            
+            final_label = "NEUTRAL"
+            if "POSITIVE" in top_label_str or "LABEL_2" in top_label_str: 
+                final_label = "POSITIVE"
+            elif "NEGATIVE" in top_label_str or "LABEL_0" in top_label_str:
+                final_label = "NEGATIVE"
+            elif "NEUTRAL" in top_label_str or "LABEL_1" in top_label_str:
+                final_label = "NEUTRAL"
+                
+            sentiment_score = confidence if final_label == "POSITIVE" else -confidence if final_label == "NEGATIVE" else 0
+            return {"label": final_label, "score": sentiment_score}
+            
+        except Exception as e:
+            print(f"AI Error: {e}")
+
+    # 3. FALLBACK: TextBlob (Simple Polarity)
+    # Note: TextBlob is English-centric, but basically works for simple structure. 
+    # For robust ID sentiment without AI, keywords are best. 
+    # Here we just default to Neutral if keywords didn't catch it.
+    return {"label": "NEUTRAL", "score": 0.0}
 
 def fetch_google_news(query: str, limit: int = 10):
     rss_url = f"https://news.google.com/rss/search?q={query}&hl=id&gl=ID&ceid=ID:id"
