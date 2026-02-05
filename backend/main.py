@@ -4,11 +4,13 @@ from routers import stocks, news, analysis, portfolio, reviews
 from worker import start_scheduler
 from contextlib import asynccontextmanager
 from news_service import load_ai_model
+from database import init_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Start the background scheduler on startup
     print("🚀 Starting AI Background Worker...")
+    init_db() # Ensure tables function
     load_ai_model() # Load BERT model once
     start_scheduler()
     yield
