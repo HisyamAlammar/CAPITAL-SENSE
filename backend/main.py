@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import stocks, news, analysis, portfolio
+from routers import stocks, news, analysis, portfolio, reviews
 from worker import start_scheduler
 from contextlib import asynccontextmanager
 from news_service import load_ai_model
@@ -33,6 +33,7 @@ app.include_router(stocks.router)
 app.include_router(news.router)
 app.include_router(analysis.router)
 app.include_router(portfolio.router)
+app.include_router(reviews.router)
 
 if __name__ == "__main__":
     import uvicorn

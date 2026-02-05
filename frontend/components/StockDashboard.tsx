@@ -460,6 +460,7 @@ export default function StockDashboard({ simpleView = false }: { simpleView?: bo
                     </AnimatePresence>
                 </div>
             )}
+
         </section>
     );
 }

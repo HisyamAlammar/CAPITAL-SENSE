@@ -19,7 +19,10 @@ export default function LoginPage() {
 
         const ACCESS_CODE = process.env.NEXT_PUBLIC_ACCESS_CODE || '220605'; // Default fallback
 
-        if (code === ACCESS_CODE) {
+        if (code === 'ADMINCS') {
+            // Admin Access
+            router.push('/admin');
+        } else if (code === ACCESS_CODE) {
             // Set simple cookie
             document.cookie = "auth_token=valid; path=/; max-age=86400"; // Expires in 1 day
             router.push('/');

@@ -40,6 +40,15 @@ class Portfolio(Base):
     # Optional: Track total invested amount for better precision
     total_invested = Column(Float, default=0.0)
 
+class Review(Base):
+    __tablename__ = "reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    rating = Column(Integer)  # 1-5
+    comment = Column(Text)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 # Create tables
 def init_db():
     Base.metadata.create_all(bind=engine)

@@ -2,6 +2,7 @@ import HeroSection from '@/components/HeroSection';
 import StockDashboard from '@/components/StockDashboard';
 import NewsFeed from '@/components/NewsFeed';
 import MarketIndexChart from '@/components/MarketIndexChart';
+import ReviewAccess from '@/components/ReviewAccess';
 import { BookOpen, TrendingUp, AlertTriangle, PieChart } from 'lucide-react';
 
 export default function Home() {
@@ -51,6 +52,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Review Button */}
+      <ReviewAccess />
 
       <footer className="w-full text-center py-8 text-gray-500 text-sm border-t border-white/5">
         <p>© 2026 CAPITAL SENSE By Abyan Hisyam Al'ammar. All Rights Reserved.</p>
