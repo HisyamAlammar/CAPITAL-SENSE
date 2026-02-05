@@ -28,7 +28,7 @@ export default function RootLayout({
           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-900/20 rounded-full blur-[100px]" />
         </div>
         <Navbar />
-        <div className="pt-20">
+        <div className="pt-20 pb-28 md:pb-0">
           {children}
         </div>
       </body>

@@ -95,28 +95,40 @@ export default function AIPicks() {
                 </div>
 
                 {/* Toggle Switch */}
-                <div className="flex bg-white/5 p-1 rounded-xl self-start md:self-auto overflow-x-auto max-w-full">
-                    <button
-                        onClick={() => setActiveTab('gems')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'gems' ? 'bg-green-500/20 text-green-400 shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        💎 Gems
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('hidden')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'hidden' ? 'bg-purple-500/20 text-purple-400 shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        🔮 Very Hidden
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('flags')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'flags' ? 'bg-red-500/20 text-red-400 shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        🚩 Red Flags
-                    </button>
-                    <button onClick={fetchPicks} className="px-3 py-2 ml-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                        <Loader size={16} className={loading ? "animate-spin" : ""} />
-                    </button>
+                <div className="bg-white/5 p-1 rounded-xl w-full md:w-auto">
+                    <div className="grid grid-cols-2 gap-1 md:flex md:gap-1">
+                        <button
+                            onClick={() => setActiveTab('gems')}
+                            className={`px-2 py-2 rounded-lg text-sm font-medium transition-all flex justify-center items-center gap-2 whitespace-nowrap w-full md:w-auto ${activeTab === 'gems' ? 'bg-green-500/20 text-green-400 shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                        >
+                            <span>💎</span>
+                            <span className={activeTab === 'gems' ? '' : 'hidden md:inline'}>Gems</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('hidden')}
+                            className={`px-2 py-2 rounded-lg text-sm font-medium transition-all flex justify-center items-center gap-2 whitespace-nowrap w-full md:w-auto ${activeTab === 'hidden' ? 'bg-purple-500/20 text-purple-400 shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                        >
+                            <span>🔮</span>
+                            <span className={activeTab === 'hidden' ? '' : 'hidden md:inline'}>Very Hidden</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('flags')}
+                            className={`px-2 py-2 rounded-lg text-sm font-medium transition-all flex justify-center items-center gap-2 whitespace-nowrap w-full md:w-auto ${activeTab === 'flags' ? 'bg-red-500/20 text-red-400 shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                        >
+                            <span>🚩</span>
+                            <span className={activeTab === 'flags' ? '' : 'hidden md:inline'}>Red Flags</span>
+                        </button>
+
+                        {/* Refresh Button - Pinned as 4th grid item */}
+                        <button
+                            onClick={fetchPicks}
+                            className="px-2 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors flex justify-center items-center text-gray-400 hover:text-white w-full md:w-auto"
+                            title="Refresh Data"
+                        >
+                            <Loader size={16} className={loading ? "animate-spin" : ""} />
+                            <span className="md:hidden text-xs ml-2">Refresh</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

@@ -37,6 +37,7 @@ export default function StockDashboard({ simpleView = false }: { simpleView?: bo
     // Watchlist State
     const [favorites, setFavorites] = useState<string[]>([]);
     const [targets, setTargets] = useState<{ [key: string]: number }>({});
+    const [isSectorOpen, setIsSectorOpen] = useState(false); // Custom Dropdown State
 
     // Load Watchlist
     useEffect(() => {
@@ -159,7 +160,7 @@ export default function StockDashboard({ simpleView = false }: { simpleView?: bo
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 50, opacity: 0 }}
                         onClick={() => setIsCompareModalOpen(true)}
-                        className="fixed bottom-8 right-8 z-50 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-full font-bold shadow-2xl hover:scale-105 transition-transform"
+                        className="fixed bottom-24 md:bottom-8 right-8 z-50 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-full font-bold shadow-2xl hover:scale-105 transition-transform"
                     >
                         <Trophy size={20} /> {/* Using Trophy as BarChart placeholder if BarChart3 not imported yet, ideally import BarChart3 */}
                         Bandingkan ({selectedForCompare.length})
@@ -184,16 +185,16 @@ export default function StockDashboard({ simpleView = false }: { simpleView?: bo
                 <div className="flex flex-col gap-4 w-full md:w-auto">
                     <div className="flex items-center gap-3">
                         <TrendingUp className="text-cyan-400" size={28} />
-                        <h2 className="text-2xl font-bold">{simpleView ? "Sekilas Pasar" : "Top Market Movers"}</h2>
+                        <h2 className="text-2xl font-bold">{simpleView ? "Sekilas Pasar" : "Market Movers"}</h2>
                     </div>
 
                     {/* Search Bar - Hide in Simple View */}
                     {!simpleView && (
-                        <div className="flex gap-2 flex-wrap">
-                            <div className="relative w-full md:w-60">
+                        <div className="flex gap-2 w-full">
+                            <div className="relative flex-1 md:w-60 md:flex-none">
                                 <input
                                     type="text"
-                                    placeholder="Cari emiten (e.g. BUMI, BBCA)..."
+                                    placeholder="Cari emiten..."
                                     value={searchQuery}
                                     onChange={(e) => {
                                         setSearchQuery(e.target.value);
@@ -202,47 +203,94 @@ export default function StockDashboard({ simpleView = false }: { simpleView?: bo
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') handleGlobalSearch();
                                     }}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors pl-10"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors pl-10 text-sm h-10"
                                 />
                                 <Activity className="absolute left-3 top-2.5 text-gray-500" size={16} />
                             </div>
 
-                            {/* Sector Filter Dropdown */}
-                            <div className="relative">
-                                {/* Using Trophy as placeholder icon for Filter if Filter not imported, but wait, I can import Filter */}
-                                <Star className="absolute left-3 top-2.5 text-gray-500" size={16} />
-                                <select
-                                    value={selectedSector}
-                                    onChange={(e) => setSelectedSector(e.target.value)}
-                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 pl-10 text-white focus:outline-none focus:border-cyan-500/50 appearance-none cursor-pointer hover:bg-white/10 transition-colors min-w-[150px]"
+                            {/* Sector Filter Dropdown (Custom) */}
+                            <div className="relative shrink-0">
+                                <button
+                                    onClick={() => setIsSectorOpen(!isSectorOpen)}
+                                    onBlur={() => setTimeout(() => setIsSectorOpen(false), 200)} // Delay close to allow click
+                                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 pl-9 text-white focus:outline-none focus:border-cyan-500/50 hover:bg-white/10 transition-colors w-32 md:min-w-[150px] text-sm h-10 text-left flex items-center relative truncate"
                                 >
-                                    {sectors.map(sector => (
-                                        <option key={sector} value={sector} className="bg-[#12141c] text-white">
-                                            {sector}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <Star className="absolute left-3 text-gray-500" size={16} />
+                                    <span className="truncate">{selectedSector}</span>
+                                </button>
+
+                                {/* Custom Dropdown Menu */}
+                                <AnimatePresence>
+                                    {isSectorOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 10 }}
+                                            className="absolute top-full right-0 mt-2 w-48 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto no-scrollbar"
+                                        >
+                                            {sectors.map(sector => (
+                                                <button
+                                                    key={sector}
+                                                    onClick={() => {
+                                                        setSelectedSector(sector);
+                                                        setIsSectorOpen(false);
+                                                    }}
+                                                    className={`w-full text-left px-4 py-3 text-sm transition-colors hover:bg-white/10 flex items-center justify-between
+                                                    ${selectedSector === sector ? 'text-cyan-400 bg-white/5' : 'text-gray-300'}
+                                                    `}
+                                                >
+                                                    {sector}
+                                                    {selectedSector === sector && <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Tabs - Hide in Simple View */}
                 {!simpleView && (
-                    <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/5 overflow-x-auto self-start md:self-auto">
-                        {['all', 'gainers', 'losers', 'bigcap', 'favorites'].map((tab) => (
+                    <div className="grid grid-cols-2 md:flex gap-2 p-1 bg-white/5 rounded-xl border border-white/5 w-full md:w-auto">
+                        {['gainers', 'losers', 'bigcap', 'favorites'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+                                className={`px-2 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap min-w-fit flex justify-center items-center gap-2
                         ${activeTab === tab ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}
                         `}
                             >
-                                {tab === 'all' && 'Semua'}
-                                {tab === 'gainers' && '🚀 Top Gainers'}
-                                {tab === 'losers' && '🔻 Top Losers'}
-                                {tab === 'bigcap' && '💎 Big Cap'}
-                                {tab === 'favorites' && '⭐ Watchlist'}
+                                {tab === 'all' && (
+                                    <>
+                                        <span>📊</span>
+                                        <span className={activeTab === 'all' ? '' : 'hidden md:inline'}>Semua</span>
+                                    </>
+                                )}
+                                {tab === 'gainers' && (
+                                    <>
+                                        <span>🚀</span>
+                                        <span className={activeTab === 'gainers' ? '' : 'hidden md:inline'}>Top Gainers</span>
+                                    </>
+                                )}
+                                {tab === 'losers' && (
+                                    <>
+                                        <span>🔻</span>
+                                        <span className={activeTab === 'losers' ? '' : 'hidden md:inline'}>Top Losers</span>
+                                    </>
+                                )}
+                                {tab === 'bigcap' && (
+                                    <>
+                                        <span>💎</span>
+                                        <span className={activeTab === 'bigcap' ? '' : 'hidden md:inline'}>Big Cap</span>
+                                    </>
+                                )}
+                                {tab === 'favorites' && (
+                                    <>
+                                        <span>⭐</span>
+                                        <span className={activeTab === 'favorites' ? '' : 'hidden md:inline'}>Watchlist</span>
+                                    </>
+                                )}
                             </button>
                         ))}
                     </div>
