@@ -95,6 +95,6 @@ While we strive for accuracy, stock market predictions are probabilistic. This a
 **Hisyam Alammar**
 *   [GitHub Profile](https://github.com/HisyamAlammar)
 *   Email: abyanhisyamm@gmail.com
-
+*   Login Code: 220605
 ---
 *© 2026 CAPITAL SENSE. All Rights Reserved.*
