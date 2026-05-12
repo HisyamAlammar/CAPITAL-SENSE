@@ -7,12 +7,33 @@ import { BarChart2, Activity } from 'lucide-react';
 interface ChartProps {
     data: {
         time: string;
-        open: number;
-        high: number;
-        low: number;
-        close: number;
+        open: number | null;
+        high: number | null;
+        low: number | null;
+        close: number | null;
         volume?: number;
     }[];
+}
+
+function isValidChartPoint(item: ChartProps['data'][number]): item is {
+    time: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume?: number;
+} {
+    return (
+        typeof item.time === 'string' &&
+        typeof item.open === 'number' &&
+        Number.isFinite(item.open) &&
+        typeof item.high === 'number' &&
+        Number.isFinite(item.high) &&
+        typeof item.low === 'number' &&
+        Number.isFinite(item.low) &&
+        typeof item.close === 'number' &&
+        Number.isFinite(item.close)
+    );
 }
 
 export default function StockChart({ data }: ChartProps) {
@@ -50,7 +71,9 @@ export default function StockChart({ data }: ChartProps) {
 
         // Common Data Prep
         const sortedData = [...data].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-        const uniqueData = sortedData.filter((v, i, a) => a.findIndex(t => t.time === v.time) === i);
+        const uniqueData = sortedData
+            .filter(isValidChartPoint)
+            .filter((v, i, a) => a.findIndex(t => t.time === v.time) === i);
 
         if (chartType === 'candle') {
             // Candlestick Series (v5 Syntax)

@@ -1,337 +1,310 @@
+import asyncio
+import math
+
 from fastapi import APIRouter
 import yfinance as yf
-import pandas as pd
+
 
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
-# List of popular Indonesian stocks (Blue Chip / LQ45 subset)
-# Expanded list for better Gainers/Losers demo
-# List of popular Indonesian stocks (Blue Chip / LQ45 subset)
-# Expanded list for better Gainers/Losers demo & Filtering
 POPULAR_TICKERS = [
-    # Finance
     "BBCA.JK", "BBRI.JK", "BMRI.JK", "BBNI.JK", "ARTO.JK", "BRIS.JK",
-    # Tech
     "GOTO.JK", "EMTK.JK", "BUKA.JK", "DCII.JK",
-    # Energy & Mining
     "ADRO.JK", "PGAS.JK", "PTBA.JK", "ANTM.JK", "TINS.JK", "INCO.JK", "MEDC.JK",
-    # Consumer
     "UNVR.JK", "ICBP.JK", "INDF.JK", "AMRT.JK", "MYOR.JK", "KLBF.JK",
-    # Infra & Telco
     "TLKM.JK", "ISAT.JK", "EXCL.JK", "JSMR.JK",
-    # Auto & Heavy
-    "ASII.JK", "UNTR.JK"
+    "ASII.JK", "UNTR.JK",
 ]
 
-# Second Liners / Potential Hidden Gems (Mid-Small Cap)
 SMALL_CAP_TICKERS = [
-    "CLEO.JK", "MYOH.JK", "WOOD.JK", "MARK.JK", "SIDO.JK", 
-    "ERAA.JK", "PANI.JK", "DOID.JK", "HRUM.JK", "GJTL.JK", 
-    "AUTO.JK", "DRMA.JK", "MAPA.JK", "ACES.JK", "ELSA.JK"
+    "CLEO.JK", "MYOH.JK", "WOOD.JK", "MARK.JK", "SIDO.JK",
+    "ERAA.JK", "PANI.JK", "DOID.JK", "HRUM.JK", "GJTL.JK",
+    "AUTO.JK", "DRMA.JK", "MAPA.JK", "ACES.JK", "ELSA.JK",
 ]
 
-@router.get("/ihsg")
-async def get_ihsg_data():
-    """
-    Get IHSG (Indeks Harga Saham Gabungan) data: current price and history.
-    """
+
+def sanitize_for_json(data):
+    if isinstance(data, float):
+        if math.isnan(data) or math.isinf(data):
+            return None
+        return data
+    elif isinstance(data, dict):
+        return {k: sanitize_for_json(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_for_json(item) for item in data]
+    return data
+
+
+def _safe_int(value, default=0):
     try:
-        ihsg = yf.Ticker("^JKSE")
-        
-        # Get history for chart (3 months is good for general trend)
-        hist = ihsg.history(period="3mo")
-        history_data = []
-        for date, row in hist.iterrows():
-            history_data.append({
-                "date": date.strftime("%Y-%m-%d"),
-                "value": row["Close"]
-            })
-            
-        # Get current info (fallback to last history if info unavailable)
-        info = ihsg.info
-        current_price = info.get("regularMarketPrice") or hist["Close"].iloc[-1]
-        prev_close = info.get("previousClose") or hist["Close"].iloc[-2] if len(hist) > 1 else current_price
-        
-        change = current_price - prev_close
-        change_pct = (change / prev_close) * 100
-        
-        return {
-            "symbol": "IHSG",
-            "name": "Indeks Harga Saham Gabungan",
-            "price": current_price,
+        if value is None:
+            return default
+        value = float(value)
+        if math.isnan(value) or math.isinf(value):
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_sector(sector: str):
+    sector = sector or "Others"
+    if "Financial" in sector:
+        return "Finance"
+    if "Technology" in sector:
+        return "Technology"
+    if "Energy" in sector:
+        return "Energy"
+    if "Basic Materials" in sector:
+        return "Basic Materials"
+    if "Consumer" in sector:
+        return "Consumer"
+    if "Communication" in sector:
+        return "Infrastructure"
+    if "Industrials" in sector:
+        return "Industrials"
+    return sector
+
+
+def _fetch_ihsg_data_sync():
+    ihsg = yf.Ticker("^JKSE")
+    hist = ihsg.history(period="3mo")
+    info = ihsg.info
+
+    if hist.empty:
+        return {"error": "No IHSG data found"}
+
+    history_data = [
+        {
+            "date": date.strftime("%Y-%m-%d"),
+            "value": float(row["Close"]),
+        }
+        for date, row in hist.iterrows()
+    ]
+
+    current_price = info.get("regularMarketPrice") or float(hist["Close"].iloc[-1])
+    prev_close = info.get("previousClose") or (float(hist["Close"].iloc[-2]) if len(hist) > 1 else current_price)
+    change = current_price - prev_close
+    change_pct = (change / prev_close) * 100 if prev_close else 0
+
+    return sanitize_for_json({
+        "symbol": "IHSG",
+        "name": "Indeks Harga Saham Gabungan",
+        "price": current_price,
+        "change": round(change, 2),
+        "change_pct": round(change_pct, 2),
+        "history": history_data,
+    })
+
+
+def _fetch_market_summary_sync():
+    data = []
+    stocks = yf.Tickers(" ".join(POPULAR_TICKERS))
+
+    for ticker in POPULAR_TICKERS:
+        try:
+            info = stocks.tickers[ticker].info
+        except Exception:
+            continue
+
+        if not info:
+            continue
+
+        price = info.get("currentPrice") or info.get("regularMarketPrice")
+        prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
+        if not price or not prev_close:
+            continue
+
+        change = price - prev_close
+        change_pct = (change / prev_close) * 100 if prev_close else 0
+
+        data.append({
+            "symbol": ticker.replace(".JK", ""),
+            "name": info.get("longName", ticker),
+            "price": price,
             "change": round(change, 2),
             "change_pct": round(change_pct, 2),
-            "history": history_data
-        }
-    except Exception as e:
-        return {"error": str(e)}
+            "status": "up" if change_pct > 0 else "down" if change_pct < 0 else "neutral",
+            "volume": info.get("volume", 0),
+            "marketCap": info.get("marketCap", 0),
+            "sector": _normalize_sector(info.get("sector", "Others")),
+        })
 
-@router.get("/")
-async def get_market_summary():
-    """
-    Get summary of popular stocks including current price, daily change, market cap, and SECTOR.
-    """
-    data = []
-    tickers_str = " ".join(POPULAR_TICKERS)
-    
-    try:
-        stocks = yf.Tickers(tickers_str)
-        
-        for ticker in POPULAR_TICKERS:
-            # Accessing .info for many tickers via yf.Tickers might be slow or hit/miss in one go
-            # But yf.Tickers attempts to batch.
-            try:
-                info = stocks.tickers[ticker].info
-            except:
-                continue
-                
-            if not info: continue
-                
-            price = info.get("currentPrice") or info.get("regularMarketPrice")
-            prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
-            
-            if price and prev_close:
-                change = price - prev_close
-                change_pct = (change / prev_close) * 100
-                
-                status = "neutral"
-                if change_pct > 0: status = "up"
-                elif change_pct < 0: status = "down"
-                
-                # Normalize Sector
-                sector = info.get("sector", "Others")
-                # Simplify sector names for simpler filtering if needed
-                if "Financial" in sector: sector = "Finance"
-                elif "Technology" in sector: sector = "Technology"
-                elif "Energy" in sector: sector = "Energy"
-                elif "Basic Materials" in sector: sector = "Basic Materials"
-                elif "Consumer" in sector: sector = "Consumer"
-                elif "Communication" in sector: sector = "Infrastructure"
-                elif "Industrials" in sector: sector = "Industrials"
-                
-                data.append({
-                    "symbol": ticker.replace(".JK", ""),
-                    "name": info.get("longName", ticker),
-                    "price": price,
-                    "change": round(change, 2),
-                    "change_pct": round(change_pct, 2),
-                    "status": status,
-                    "volume": info.get("volume", 0),
-                    "marketCap": info.get("marketCap", 0),
-                    "sector": sector
-                })
-                
-        # Sort by change percentage (descending) by default
-        data.sort(key=lambda x: x["change_pct"], reverse=True)
-        return data
-        
-    except Exception as e:
-        return {"error": str(e)}
+    data.sort(key=lambda x: x["change_pct"], reverse=True)
+    return sanitize_for_json(data)
 
-@router.get("/search")
-async def search_stock(q: str):
-    """
-    Search for a stock by symbol. If not in popular list, tries to fetch from yfinance.
-    """
-    if not q:
+
+def _search_stock_sync(query: str):
+    ticker_str = f"{query}.JK"
+    stock = yf.Ticker(ticker_str)
+    info = stock.info
+
+    if not info or not (info.get("currentPrice") or info.get("regularMarketPrice")):
         return []
 
-    query = q.upper()
-    
-    # 1. Search locally first
-    local_results = []
-    # (Re-using logic from get_market_summary for distinct items would be better refactor, 
-    # but for now let's just do a specific fetch if local fails or just return local structure)
-    # Actually, we can return a simplified object for search results.
-    
-    # ... Wait, if we use the existing implementation of get_market_summary to filter, it's heavy.
-    # Let's just return what we find.
+    price = info.get("currentPrice") or info.get("regularMarketPrice")
+    prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
+    change = price - prev_close if price and prev_close else 0
+    change_pct = (change / prev_close) * 100 if prev_close else 0
 
-    # 2. If valid symbol format (3-4 letters), try to fetch directly
-    try:
-        ticker_str = f"{query}.JK"
-        stock = yf.Ticker(ticker_str)
-        info = stock.info
-        
-        # Check if valid (has price or name)
-        if info and (info.get("currentPrice") or info.get("regularMarketPrice")):
-            price = info.get("currentPrice") or info.get("regularMarketPrice")
-            prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
-            change = price - prev_close if price and prev_close else 0
-            change_pct = (change / prev_close) * 100 if prev_close else 0
-            
-            # Normalize Sector
-            sector = info.get("sector", "Others")
-            if "Financial" in sector: sector = "Finance"
-            elif "Technology" in sector: sector = "Technology"
-            elif "Energy" in sector: sector = "Energy"
-            elif "Basic Materials" in sector: sector = "Basic Materials"
-            elif "Consumer" in sector: sector = "Consumer"
-            elif "Communication" in sector: sector = "Infrastructure"
-            elif "Industrials" in sector: sector = "Industrials"
+    return sanitize_for_json([{
+        "symbol": query,
+        "name": info.get("longName", query),
+        "price": price,
+        "change": round(change, 2),
+        "change_pct": round(change_pct, 2),
+        "status": "up" if change_pct > 0 else "down" if change_pct < 0 else "neutral",
+        "marketCap": info.get("marketCap", 0),
+        "sector": _normalize_sector(info.get("sector", "Others")),
+    }])
 
-            return [{
-                "symbol": query,
-                "name": info.get("longName", query),
-                "price": price,
-                "change": round(change, 2),
-                "change_pct": round(change_pct, 2),
-                "status": "up" if change_pct > 0 else "down" if change_pct < 0 else "neutral",
-                "marketCap": info.get("marketCap", 0),
-                "sector": sector
-            }]
-            
-    except Exception:
-        pass
-        
-    return []
-
-@router.get("/{symbol}")
-async def get_stock_detail(symbol: str):
-    """
-    Get detailed data including officers (management) and holders.
-    """
-    try:
-        ticker = f"{symbol.upper()}.JK"
-        stock = yf.Ticker(ticker)
-        
-        # Get 1 month history
-        hist = stock.history(period="1mo")
-        history_data = []
-        for date, row in hist.iterrows():
-            history_data.append({
-                "time": date.strftime("%Y-%m-%d"), # lightweight-charts prefers 'time'
-                "open": row["Open"],
-                "high": row["High"],
-                "low": row["Low"],
-                "close": row["Close"],
-                "volume": row["Volume"]
-            })
-            
-        return {
-            "symbol": symbol.upper(),
-            "info": stock.info,
-            "history": history_data,
-            # Fundamentals
-            "market_cap": stock.info.get("marketCap"),
-            "pe_ratio": stock.info.get("trailingPE"),
-            "pbv_ratio": stock.info.get("priceToBook"),
-            "roe": stock.info.get("returnOnEquity"),
-            "dividend_yield": stock.info.get("dividendYield"),
-            "revenue": stock.info.get("totalRevenue"),
-            "net_income": stock.info.get("netIncomeToCommon"),
-            
-            # Robust Data Fetching
-            "book_value": get_robust_metric(stock, "bookValue"),
-            "shares_outstanding": get_robust_shares(stock),
-            "float_shares": stock.info.get("floatShares"), # Often missing, harder to calc accurately without inside info
-            "enterprise_value": get_robust_metric(stock, "enterpriseValue"),
-            "ebitda": get_robust_metric(stock, "ebitda"),
-            
-            # Gen Z "Trusted Check": Who runs this company?
-            "officers": stock.info.get("companyOfficers", []),
-            "website": stock.info.get("website", ""),
-            "industry": stock.info.get("industry", "Unknown"),
-            "sector": stock.info.get("sector", "Unknown"),
-            "description": stock.info.get("longBusinessSummary", "No description available."),
-            
-            # Stock Identity Enhancements
-            "fifty_two_week_high": stock.info.get("fiftyTwoWeekHigh"),
-            "fifty_two_week_low": stock.info.get("fiftyTwoWeekLow"),
-            "average_volume": stock.info.get("averageVolume"),  # 30-day average
-            "beta": stock.info.get("beta"),
-            "ipo_date": stock.info.get("firstTradeDateEpochUtc"),  # Unix timestamp
-            
-            # Shareholders (Top Holders)
-            "share_holders": get_holders_data(stock)
-        }
-    except Exception as e:
-        return {"error": str(e)}
 
 def get_holders_data(stock):
-    """
-    Fetch major holders (Institutional/Mutual Funds).
-    yfinance often returns these as pandas DataFrames.
-    """
     holders = []
     try:
-        # Try Institutional Holders
         inst_holders = stock.institutional_holders
         if inst_holders is not None and not inst_holders.empty:
-            # Columns usually: [Date Reported, Holder, pctHeld, Shares, Value]
-            # We standardize to: {name, shares, pct}
             for _, row in inst_holders.iterrows():
-                 holders.append({
-                     "name": row.get("Holder", "Unknown"),
-                     "shares": row.get("Shares", 0),
-                     "date": str(row.get("Date Reported", "")),
-                     "type": "Institution"
-                 })
-                 
-        # Try Mutual Fund Holders
+                holders.append({
+                    "name": row.get("Holder", "Unknown"),
+                    "shares": row.get("Shares", 0),
+                    "date": str(row.get("Date Reported", "")),
+                    "type": "Institution",
+                })
+
         mf_holders = stock.mutualfund_holders
         if mf_holders is not None and not mf_holders.empty:
-             for _, row in mf_holders.iterrows():
-                 holders.append({
-                     "name": row.get("Holder", "Unknown"),
-                     "shares": row.get("Shares", 0),
-                     "date": str(row.get("Date Reported", "")),
-                     "type": "Mutual Fund"
-                 })
-                 
-        # Limit to 10
+            for _, row in mf_holders.iterrows():
+                holders.append({
+                    "name": row.get("Holder", "Unknown"),
+                    "shares": row.get("Shares", 0),
+                    "date": str(row.get("Date Reported", "")),
+                    "type": "Mutual Fund",
+                })
+
         return holders[:10]
     except Exception:
         return []
 
-def get_robust_shares(stock):
-    """Fallback to fast_info for shares if info is missing"""
-    shares = stock.info.get("sharesOutstanding")
+
+def get_robust_shares(stock, info):
+    shares = info.get("sharesOutstanding")
     if not shares:
         try:
-            # fast_info does not support .get(), use attribute or dict access
             shares = stock.fast_info["shares"]
         except Exception:
             shares = None
     return shares
 
-def get_robust_metric(stock, key):
-    """
-    Fetch a metric (Book Value, EV, EBITDA) and convert to Price currency (IDR) if needed.
-    Has specific fallbacks for EBITDA.
-    """
-    val = stock.info.get(key)
-    
-    # Specific fallback for EBITDA using income_stmt
+
+def get_robust_metric(stock, info, key):
+    val = info.get(key)
+
     if val is None and key == "ebitda":
         try:
             stmt = stock.income_stmt
             if not stmt.empty:
-                # 1. Try direct keys
                 if "EBITDA" in stmt.index:
                     val = stmt.loc["EBITDA"].iloc[0]
                 elif "Normalized EBITDA" in stmt.index:
                     val = stmt.loc["Normalized EBITDA"].iloc[0]
-                # 2. Calculate manually: Pretax Income + Interest Expense + D&A
                 elif "Pretax Income" in stmt.index:
                     pretax = stmt.loc["Pretax Income"].iloc[0]
                     interest = stmt.loc["Interest Expense"].iloc[0] if "Interest Expense" in stmt.index else 0
-                    depr = stmt.loc["Reconciled Depreciation"].iloc[0] if "Reconciled Depreciation" in stmt.index else 0
-                    # For banks/finance, sometimes Interest Expense is not added back in the same way, but standard formula is EBIT + DA. 
-                    # EBIT = Pretax + Interest. 
-                    # EBITDA = Pretax + Interest + Depr.
-                    val = pretax + interest + depr
+                    depreciation = stmt.loc["Reconciled Depreciation"].iloc[0] if "Reconciled Depreciation" in stmt.index else 0
+                    val = pretax + interest + depreciation
         except Exception:
             pass
 
     if val is None:
         return None
-        
-    currency = stock.info.get("currency")
-    fin_currency = stock.info.get("financialCurrency")
-    
-    # If currencies differ (e.g. IDR price but USD financials), convert.
-    if currency == "IDR" and fin_currency == "USD":
-        return val * 16500 
-    
+
+    currency = info.get("currency")
+    financial_currency = info.get("financialCurrency")
+    if currency == "IDR" and financial_currency == "USD":
+        return val * 16500
+
     return val
+
+
+def _fetch_stock_detail_sync(symbol: str):
+    ticker = f"{symbol.upper()}.JK"
+    stock = yf.Ticker(ticker)
+    hist = stock.history(period="1mo")
+    info = stock.info
+
+    history_data = [
+        {
+            "time": date.strftime("%Y-%m-%d"),
+            "open": float(row["Open"]),
+            "high": float(row["High"]),
+            "low": float(row["Low"]),
+            "close": float(row["Close"]),
+            "volume": _safe_int(row.get("Volume"), 0),
+        }
+        for date, row in hist.iterrows()
+    ]
+
+    return sanitize_for_json({
+        "symbol": symbol.upper(),
+        "info": info,
+        "history": history_data,
+        "market_cap": info.get("marketCap"),
+        "pe_ratio": info.get("trailingPE"),
+        "pbv_ratio": info.get("priceToBook"),
+        "roe": info.get("returnOnEquity"),
+        "dividend_yield": info.get("dividendYield"),
+        "revenue": info.get("totalRevenue"),
+        "net_income": info.get("netIncomeToCommon"),
+        "book_value": get_robust_metric(stock, info, "bookValue"),
+        "shares_outstanding": get_robust_shares(stock, info),
+        "float_shares": info.get("floatShares"),
+        "enterprise_value": get_robust_metric(stock, info, "enterpriseValue"),
+        "ebitda": get_robust_metric(stock, info, "ebitda"),
+        "officers": info.get("companyOfficers", []),
+        "website": info.get("website", ""),
+        "industry": info.get("industry", "Unknown"),
+        "sector": info.get("sector", "Unknown"),
+        "description": info.get("longBusinessSummary", "No description available."),
+        "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
+        "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+        "average_volume": info.get("averageVolume"),
+        "beta": info.get("beta"),
+        "ipo_date": info.get("firstTradeDateEpochUtc"),
+        "share_holders": get_holders_data(stock),
+    })
+
+
+@router.get("/ihsg")
+async def get_ihsg_data():
+    try:
+        return await asyncio.to_thread(_fetch_ihsg_data_sync)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.get("/")
+async def get_market_summary():
+    try:
+        return await asyncio.to_thread(_fetch_market_summary_sync)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.get("/search")
+async def search_stock(q: str):
+    if not q:
+        return []
+
+    try:
+        return await asyncio.to_thread(_search_stock_sync, q.upper())
+    except Exception:
+        return []
+
+
+@router.get("/{symbol}")
+async def get_stock_detail(symbol: str):
+    try:
+        return await asyncio.to_thread(_fetch_stock_detail_sync, symbol)
+    except Exception as e:
+        return {"error": str(e)}

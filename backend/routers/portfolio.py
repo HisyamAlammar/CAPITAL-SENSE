@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, constr
 from sqlalchemy.orm import Session
 from database import SessionLocal, Portfolio
 import yfinance as yf
@@ -17,9 +17,9 @@ def get_db():
 
 # Pydantic Models
 class PortfolioItem(BaseModel):
-    symbol: str
-    price: float # Buy Price (Avg)
-    lots: int    # Input in Lots
+    symbol: constr(strip_whitespace=True, min_length=2, max_length=8, pattern=r"^[A-Za-z0-9]+$")
+    price: float = Field(gt=0, le=10_000_000)
+    lots: int = Field(gt=0, le=1_000_000)
 
 class PortfolioResponse(BaseModel):
     id: int

@@ -8,27 +8,32 @@ import { motion } from 'framer-motion';
 export default function LoginPage() {
     const [code, setCode] = useState('');
     const [error, setError] = useState(false);
+    const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
 
-        // Simple "Hardcoded" check for MVP or Env Var check
-        // Ideally, this calls an API route to verify and set a secure HttpOnly cookie.
-        // For this "Personal Beta" use case, we'll store a simple cookie locally.
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code }),
+            });
 
-        const ACCESS_CODE = process.env.NEXT_PUBLIC_ACCESS_CODE || '220605'; // Default fallback
+            if (!response.ok) {
+                throw new Error('Invalid access code');
+            }
 
-        if (code === 'ADMINCS') {
-            // Admin Access
-            router.push('/admin');
-        } else if (code === ACCESS_CODE) {
-            // Set simple cookie
-            document.cookie = "auth_token=valid; path=/; max-age=86400"; // Expires in 1 day
-            router.push('/');
-        } else {
+            const data = await response.json();
+            router.push(data.role === 'admin' ? '/admin' : '/');
+            router.refresh();
+        } catch {
             setError(true);
             setTimeout(() => setError(false), 2000);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -73,9 +78,10 @@ export default function LoginPage() {
 
                     <button
                         type="submit"
-                        className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-bold text-white hover:shadow-lg hover:shadow-cyan-500/25 transition-all flex items-center justify-center gap-2 group"
+                        disabled={loading}
+                        className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-bold text-white hover:shadow-lg hover:shadow-cyan-500/25 transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Masuk Dashboard <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                        {loading ? 'Memverifikasi...' : 'Masuk Dashboard'} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                     </button>
                 </form>
 

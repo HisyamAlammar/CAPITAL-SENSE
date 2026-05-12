@@ -1,9 +1,11 @@
-from main import app as application
-import sys
 import os
+import sys
 
-# Add backend directory to path so imports work
-sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 
-# Vercel needs 'app' variable
-app = application
+BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
+sys.path.insert(0, BACKEND_DIR)
+
+from main import app  # noqa: E402
+
+
+application = app

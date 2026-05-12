@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -22,46 +22,70 @@ export default function StockDetailPage() {
     const [selectedTimeframe, setSelectedTimeframe] = useState<string>("3m");
 
     // Fetch prediction with timeframe
-    const fetchPrediction = async (timeframe: string) => {
+    const fetchPrediction = useCallback(async (timeframe: string, signal?: AbortSignal) => {
         try {
-            const predRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/analysis/prediction/${symbol}?timeframe=${timeframe}`);
+            const predRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/analysis/prediction/${symbol}?timeframe=${timeframe}`, { signal });
+            if (predRes.data?.error) throw new Error(predRes.data.error);
             setPrediction(predRes.data);
         } catch (error) {
-            console.error("Error fetching prediction", error);
+            if (!signal?.aborted) {
+                console.error("Error fetching prediction", error);
+            }
         }
-    };
+    }, [symbol]);
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchData = async () => {
+            setLoading(true);
             try {
-                // 1. Get Stock Details (History)
-                const stockRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/stocks/${symbol}`);
+                const [stockRes, predRes, newsRes] = await Promise.all([
+                    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/stocks/${symbol}`, {
+                        signal: controller.signal,
+                    }),
+                    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/analysis/prediction/${symbol}?timeframe=3m`, {
+                        signal: controller.signal,
+                    }),
+                    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/news/`, {
+                        params: { q: symbol },
+                        signal: controller.signal,
+                    }),
+                ]);
+
+                if (stockRes.data?.error || predRes.data?.error || newsRes.data?.error) {
+                    throw new Error(stockRes.data?.error || predRes.data?.error || newsRes.data?.error);
+                }
+
                 setStockData(stockRes.data);
-
-                // 2. Get Prediction (default 3m)
-                await fetchPrediction(selectedTimeframe);
-
-                // 3. Get Related News
-                const query = stockRes.data.info?.longName || symbol;
-                const newsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/news/?q=${query}`);
+                setPrediction(predRes.data);
                 setNews(newsRes.data);
-
             } catch (error) {
-                console.error("Error fetching detail data", error);
+                if (!controller.signal.aborted) {
+                    console.error("Error fetching detail data", error);
+                }
             } finally {
-                setLoading(false);
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
             }
         };
 
         if (symbol) fetchData();
+
+        return () => controller.abort();
     }, [symbol]);
 
     // Update prediction when timeframe changes
     useEffect(() => {
+        const controller = new AbortController();
+
         if (symbol && !loading) {
-            fetchPrediction(selectedTimeframe);
+            fetchPrediction(selectedTimeframe, controller.signal);
         }
-    }, [selectedTimeframe]);
+
+        return () => controller.abort();
+    }, [selectedTimeframe, symbol, loading, fetchPrediction]);
 
     if (loading) return <div className="min-h-screen flex items-center justify-center text-cyan-400">Loading Intelligence...</div>;
 
@@ -290,6 +314,7 @@ export default function StockDetailPage() {
                                 key={i}
                                 href={item.link}
                                 target="_blank"
+                                rel="noopener noreferrer"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: i * 0.1 }}

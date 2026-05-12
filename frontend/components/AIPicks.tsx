@@ -21,13 +21,21 @@ interface AIPick {
     signals: Signal;
 }
 
+interface IpoArticle {
+    title: string;
+    description?: string;
+    source: string;
+    link: string;
+    published_at: string;
+}
+
 export default function AIPicks() {
     const [picks, setPicks] = useState<{ buys: AIPick[], sells: AIPick[], hidden_gems: AIPick[] }>({ buys: [], sells: [], hidden_gems: [] });
     const [activeTab, setActiveTab] = useState<'gems' | 'flags' | 'hidden'>('gems');
     const [loading, setLoading] = useState(true);
 
     // IPO State
-    const [ipoNews, setIpoNews] = useState<any[]>([]);
+    const [ipoNews, setIpoNews] = useState<IpoArticle[]>([]);
     const [loadingIpo, setLoadingIpo] = useState(true);
 
     const fetchPicks = async () => {
@@ -254,7 +262,7 @@ export default function AIPicks() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {ipoNews.map((news, i) => (
-                            <a href={news.url} target="_blank" rel="noopener noreferrer" key={i} className="flex gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
+                            <a href={news.link} target="_blank" rel="noopener noreferrer" key={news.link || i} className="flex gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
                                 <div className="flex-1">
                                     <h4 className="font-semibold text-sm mb-1 group-hover:text-blue-400 transition-colors line-clamp-2">{news.title}</h4>
                                     <p className="text-xs text-gray-500 mb-2 line-clamp-2">{news.description}</p>

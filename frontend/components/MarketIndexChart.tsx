@@ -19,17 +19,28 @@ export default function MarketIndexChart() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchData = async () => {
             try {
-                const res = await axios.get('http://localhost:8000/api/stocks/ihsg');
+                const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/stocks/ihsg`, {
+                    signal: controller.signal,
+                });
+                if (res.data?.error) throw new Error(res.data.error);
                 setData(res.data);
             } catch (error) {
-                console.error("Failed to fetch IHSG data", error);
+                if (!controller.signal.aborted) {
+                    console.error("Failed to fetch IHSG data", error);
+                }
             } finally {
-                setLoading(false);
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
             }
         };
+
         fetchData();
+        return () => controller.abort();
     }, []);
 
     if (loading) return <div className="w-full h-64 bg-white/5 rounded-2xl animate-pulse" />;
@@ -67,14 +78,8 @@ export default function MarketIndexChart() {
                                     <stop offset="95%" stopColor={isPositive ? "#4ade80" : "#f87171"} stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <XAxis
-                                dataKey="date"
-                                hide
-                            />
-                            <YAxis
-                                domain={['auto', 'auto']}
-                                hide
-                            />
+                            <XAxis dataKey="date" hide />
+                            <YAxis domain={['auto', 'auto']} hide />
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                                 itemStyle={{ color: '#fff' }}

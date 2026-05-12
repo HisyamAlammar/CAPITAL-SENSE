@@ -1,7 +1,8 @@
 fastapi
 uvicorn
 yfinance
-requests
+httpx
+psycopg2-binary
 beautifulsoup4
 textblob
 nltk
@@ -9,5 +10,7 @@ pandas
 scipy
 apscheduler
 sqlalchemy
+python-dotenv
+litellm
 # transformers (Commented out for Railway Free Tier - 8GB limit)
 # torch --index-url https://download.pytorch.org/whl/cpu (Commented out, too large)

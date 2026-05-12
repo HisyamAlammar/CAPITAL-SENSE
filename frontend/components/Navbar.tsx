@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { LayoutDashboard, Newspaper, LineChart, LogOut, PieChart } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -9,10 +8,10 @@ export default function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
 
-    const handleLogout = () => {
-        // Clear cookie
-        document.cookie = "auth_token=; path=/; max-age=0";
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
         router.push('/login');
+        router.refresh();
     };
 
     // Hide Navbar on Login page

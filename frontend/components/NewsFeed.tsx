@@ -88,6 +88,7 @@ export default function NewsFeed({ limit }: { limit?: number }) {
                                 key={i}
                                 href={item.link}
                                 target="_blank"
+                                rel="noopener noreferrer"
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}
@@ -137,7 +138,7 @@ export default function NewsFeed({ limit }: { limit?: number }) {
                         ))
                     ) : (
                         <div className="col-span-full text-center py-10 text-gray-500">
-                            Tidak ada berita yang cocok dengan "{searchQuery}"
+                            Tidak ada berita yang cocok dengan &quot;{searchQuery}&quot;
                         </div>
                     )
                 )}

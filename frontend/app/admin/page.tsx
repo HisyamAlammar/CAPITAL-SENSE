@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Shield, Star, Lock, RefreshCw, Calendar, User } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Shield, Star, RefreshCw, Calendar, User } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface Review {
     id: number;
@@ -14,27 +14,15 @@ interface Review {
 }
 
 export default function AdminPage() {
-    const [passcode, setPasscode] = useState('');
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [reviews, setReviews] = useState<Review[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (passcode === 'ADMINCS') {
-            setIsAuthenticated(true);
-            fetchReviews();
-        } else {
-            setError('Kode akses salah!');
-            setPasscode('');
-        }
-    };
 
     const fetchReviews = async () => {
         setLoading(true);
+        setError('');
         try {
-            const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/`);
+            const res = await axios.get('/api/admin/reviews');
             setReviews(res.data);
         } catch (err) {
             console.error("Failed to fetch reviews", err);
@@ -44,66 +32,37 @@ export default function AdminPage() {
         }
     };
 
-    if (!isAuthenticated) {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-6 bg-[#0a0a0a]">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="max-w-md w-full glass-panel p-8 rounded-2xl border border-white/10"
-                >
-                    <div className="flex justify-center mb-6">
-                        <div className="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center">
-                            <Shield size={32} className="text-cyan-400" />
-                        </div>
-                    </div>
-                    <h2 className="text-2xl font-bold text-center mb-2">Admin Access</h2>
-                    <p className="text-gray-400 text-center mb-6 text-sm">Masukan kode rahasia untuk mengakses dashboard admin.</p>
-
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-3 text-gray-500" size={18} />
-                            <input
-                                type="password"
-                                value={passcode}
-                                onChange={(e) => {
-                                    setPasscode(e.target.value);
-                                    setError('');
-                                }}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl px-10 py-3 text-white focus:border-cyan-500/50 focus:outline-none transition-colors"
-                                placeholder="Passcode"
-                            />
-                        </div>
-                        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-                        <button
-                            type="submit"
-                            className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-cyan-500/20"
-                        >
-                            Masuk Dashboard
-                        </button>
-                    </form>
-                </motion.div>
-            </div>
-        );
-    }
+    useEffect(() => {
+        fetchReviews();
+    }, []);
 
     return (
         <main className="min-h-screen p-6 pb-24 max-w-7xl mx-auto pt-24">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-400">
-                        Admin Dashboard
-                    </h1>
+                    <div className="flex items-center gap-3 mb-2">
+                        <Shield size={28} className="text-cyan-400" />
+                        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-400">
+                            Admin Dashboard
+                        </h1>
+                    </div>
                     <p className="text-gray-400">Monitoring Ulasan Pengguna</p>
                 </div>
                 <button
                     onClick={fetchReviews}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors self-start md:self-auto"
+                    disabled={loading}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors self-start md:self-auto disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                     Refresh Data
                 </button>
             </header>
+
+            {error && (
+                <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                    {error}
+                </div>
+            )}
 
             {loading && reviews.length === 0 ? (
                 <div className="text-center py-20 text-gray-500">Loading data...</div>
@@ -135,19 +94,23 @@ export default function AdminPage() {
                                     <div className="flex items-center gap-1 text-xs text-gray-500">
                                         <Calendar size={10} />
                                         {new Date(review.created_at).toLocaleDateString('id-ID', {
-                                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
                                         })}
                                     </div>
                                 </div>
                             </div>
 
                             <p className="text-gray-300 text-sm leading-relaxed">
-                                "{review.comment}"
+                                &ldquo;{review.comment}&rdquo;
                             </p>
                         </motion.div>
                     ))}
 
-                    {reviews.length === 0 && (
+                    {reviews.length === 0 && !error && (
                         <div className="col-span-full text-center py-20 text-gray-500 border border-dashed border-white/10 rounded-xl">
                             Belum ada ulasan masuk.
                         </div>

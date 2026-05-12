@@ -1,45 +1,68 @@
-from datetime import datetime
-from apscheduler.schedulers.background import BackgroundScheduler
-from sqlalchemy.orm import Session
-from database import SessionLocal, NewsArticle, init_db
-from news_service import fetch_google_news, save_articles_to_db
-from routers.stocks import POPULAR_TICKERS, get_market_summary
 import asyncio
+from datetime import datetime
+from threading import Lock
 
-# Initialize DB
-init_db()
+from apscheduler.schedulers.background import BackgroundScheduler
 
-async def update_all_news():
-    print(f"[{datetime.now()}] 🔄 Starting Background News Update...")
+from database import SessionLocal, init_db
+from news_service import enrich_articles_with_ai, fetch_google_news, save_articles_to_db
+
+
+_news_update_lock = Lock()
+
+
+def update_all_news():
+    print(f"[{datetime.now()}] Starting Background News Update...")
     db = SessionLocal()
-    
+
     try:
-        # 1. Fetch Global Market News
-        print("   -> Fetching Global Market News...")
-        global_news = fetch_google_news("saham ekonomi indonesia", limit=10)
+        global_news = asyncio.run(fetch_google_news("saham ekonomi indonesia", limit=10))
+        global_news = asyncio.run(enrich_articles_with_ai(global_news))
         save_articles_to_db(db, global_news, "Global")
-            
-        # 2. Smart Prefetch: Popular Stocks (Blue Chips)
-        # We limit to top 5 to avoid rate limits from Google
-        top_picks = ["BBCA.JK", "BBRI.JK", "BMRI.JK", "TLKM.JK", "ASII.JK"]
-        
-        for ticker in top_picks:
+
+        for ticker in ["BBCA.JK", "BBRI.JK", "BMRI.JK", "TLKM.JK", "ASII.JK"]:
             symbol = ticker.replace(".JK", "")
-            print(f"   -> Fetching News for {symbol}...")
-            stock_news = fetch_google_news(f"{symbol} saham", limit=5)
+            stock_news = asyncio.run(fetch_google_news(f"{symbol} saham", limit=5))
+            stock_news = asyncio.run(enrich_articles_with_ai(stock_news))
             save_articles_to_db(db, stock_news, symbol)
-        
     except Exception as e:
         print(f"Error in background job: {e}")
     finally:
         db.close()
-        print(f"[{datetime.now()}] ✅ Background Update Finished!")
+        print(f"[{datetime.now()}] Background Update Finished.")
+
+
+def _run_update_all_news():
+    if not _news_update_lock.acquire(blocking=False):
+        print("Skipping background news update: previous job still running.")
+        return
+
+    try:
+        update_all_news()
+    finally:
+        _news_update_lock.release()
+
 
 def start_scheduler():
+    init_db()
     scheduler = BackgroundScheduler()
-    # Run immediately on startup
-    scheduler.add_job(lambda: asyncio.run(update_all_news()), 'interval', minutes=15)
+    scheduler.add_job(
+        _run_update_all_news,
+        "interval",
+        minutes=15,
+        id="news_update_interval",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=300,
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _run_update_all_news,
+        "date",
+        id="news_update_startup",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
     scheduler.start()
-    
-    # Run once on startup
-    asyncio.create_task(update_all_news())
+    return scheduler
