@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 // import ReactMarkdown from 'react-markdown'; // Optional, but simple text is fine too
 
+interface RecapData {
+    recap: string;
+    mood?: string;
+    top_topic?: string;
+}
+
 export default function MarketRecap() {
-    const [recap, setRecap] = useState<any>(null);
+    const [recap, setRecap] = useState<RecapData | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchRecap = async () => {

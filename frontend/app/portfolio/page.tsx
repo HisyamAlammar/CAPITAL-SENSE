@@ -3,13 +3,24 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, DollarSign, Wallet } from 'lucide-react';
 
 const formatIDR = (value: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
 
+interface Holding {
+    id: number;
+    symbol: string;
+    avg_price: number;
+    total_lots: number;
+    current_price: number;
+    total_value: number;
+    gain_loss_pct: number;
+    gain_loss_value: number;
+}
+
 export default function PortfolioPage() {
-    const [holdings, setHoldings] = useState<any[]>([]);
+    const [holdings, setHoldings] = useState<Holding[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
 
@@ -47,7 +58,7 @@ export default function PortfolioPage() {
             setPrice('');
             setLots('');
             fetchPortfolio(); // Refresh
-        } catch (error) {
+        } catch {
             alert('Failed to add transaction');
         }
     };
@@ -57,7 +68,7 @@ export default function PortfolioPage() {
         try {
             await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/api/portfolio/${symbol}`);
             fetchPortfolio();
-        } catch (error) {
+        } catch {
             alert('Failed to delete asset');
         }
     };
@@ -127,7 +138,7 @@ export default function PortfolioPage() {
                     <div className="p-10 text-center text-gray-400">Loading Market Data...</div>
                 ) : holdings.length === 0 ? (
                     <div className="p-10 text-center text-gray-500">
-                        Belum ada aset. Klik "Add Asset" untuk mulai tracking.
+                        Belum ada aset. Klik &quot;Add Asset&quot; untuk mulai tracking.
                     </div>
                 ) : (
                     <div className="overflow-x-auto">

@@ -1,10 +1,18 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Info, Scale } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
 
+interface ShareHolder {
+    name: string;
+    shares: number;
+    date: string;
+    type: string;
+}
+
 interface Fundamentals {
-    market_cap: number;
+    market_cap?: number;
     pe_ratio?: number;
     pbv_ratio?: number;
     roe?: number;
@@ -14,11 +22,46 @@ interface Fundamentals {
     float_shares?: number;
     enterprise_value?: number;
     ebitda?: number;
-    share_holders?: any[];
+    share_holders?: ShareHolder[];
 }
 
 interface FundamentalCardProps {
     data: Fundamentals;
+}
+
+interface MetricCardProps {
+    icon: LucideIcon;
+    label: string;
+    value: ReactNode;
+    target?: string;
+    colorClass?: string;
+    tooltip: string;
+    colSpan?: string;
+}
+
+function MetricCard({ icon: Icon, label, value, target, colorClass, tooltip, colSpan = "" }: MetricCardProps) {
+    return (
+        <div className={`p-4 rounded-xl bg-white/5 border border-white/5 relative group ${colSpan}`}>
+            <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider mb-2">
+                <Icon size={14} />
+                {label}
+                <div className="relative">
+                    <Info size={12} className="opacity-50 hover:opacity-100 transition-opacity cursor-help text-cyan-400" />
+                    {/* Tooltip Popup */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-gray-900 border border-white/10 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                        <p className="text-[10px] text-gray-300 leading-relaxed text-center">
+                            {tooltip}
+                        </p>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+                    </div>
+                </div>
+            </div>
+            <div className={clsx("text-lg font-bold", colorClass || "text-white")}>
+                {value}
+            </div>
+            {target && <div className="text-[10px] text-gray-500 mt-1">{target}</div>}
+        </div>
+    );
 }
 
 export default function FundamentalCard({ data }: FundamentalCardProps) {
@@ -76,7 +119,7 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
         bg = "bg-red-500/10";
     }
 
-    const formatCurrency = (val: number) => {
+    const formatCurrency = (val?: number) => {
         if (!val) return "-";
         if (val >= 1e12) return `Rp ${(val / 1e12).toFixed(2)} T`;
         if (val >= 1e9) return `Rp ${(val / 1e9).toFixed(2)} M`;
@@ -89,30 +132,6 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
         if (val >= 1e6) return `${(val / 1e6).toFixed(2)} Juta Lbr`;
         return `${val.toLocaleString('id-ID')} Lbr`;
     };
-
-    // Reusable Metric Card with Tooltip
-    const MetricCard = ({ icon: Icon, label, value, target, colorClass, tooltip, colSpan = "" }: any) => (
-        <div className={`p-4 rounded-xl bg-white/5 border border-white/5 relative group ${colSpan}`}>
-            <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider mb-2">
-                <Icon size={14} />
-                {label}
-                <div className="relative">
-                    <Info size={12} className="opacity-50 hover:opacity-100 transition-opacity cursor-help text-cyan-400" />
-                    {/* Tooltip Popup */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-gray-900 border border-white/10 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                        <p className="text-[10px] text-gray-300 leading-relaxed text-center">
-                            {tooltip}
-                        </p>
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
-                    </div>
-                </div>
-            </div>
-            <div className={clsx("text-lg font-bold", colorClass || "text-white")}>
-                {value}
-            </div>
-            {target && <div className="text-[10px] text-gray-500 mt-1">{target}</div>}
-        </div>
-    );
 
     return (
         <motion.div
@@ -230,7 +249,7 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
                     <p className="text-xs text-gray-500 mb-4 bg-white/5 p-3 rounded-lg border border-white/5">
                         <Info size={12} className="inline mr-1 mb-0.5" />
                         Data ini menampilkan kepemilikan oleh <strong>Institusi Besar (Big Fund)</strong>.
-                        Kehadiran nama-nama besar (seperti Vanguard, Blackrock) menunjukkan validitas fundamental dan kepercayaan investor global ("Foreign Flow").
+                        Kehadiran nama-nama besar (seperti Vanguard, Blackrock) menunjukkan validitas fundamental dan kepercayaan investor global (&quot;Foreign Flow&quot;).
                     </p>
 
                     <div className="overflow-x-auto">
@@ -244,7 +263,7 @@ export default function FundamentalCard({ data }: FundamentalCardProps) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {data.share_holders.map((holder: any, idx: number) => (
+                                {data.share_holders.map((holder, idx) => (
                                     <tr key={idx} className="hover:bg-white/5 transition-colors">
                                         <td className="px-4 py-3 font-medium text-white">{holder.name}</td>
                                         <td className="px-4 py-3 text-cyan-400 text-xs">

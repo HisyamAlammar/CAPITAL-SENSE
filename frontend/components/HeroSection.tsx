@@ -112,7 +112,7 @@ export default function HeroSection() {
                                 </div>
 
                                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl text-sm text-blue-300">
-                                    💡 <strong>Tips Pro:</strong> Gunakan fitur "Prediksi" di website ini untuk melihat sinyal teknikal dan sentimen berita sebelum membeli.
+                                    💡 <strong>Tips Pro:</strong> Gunakan fitur &quot;Prediksi&quot; di website ini untuk melihat sinyal teknikal dan sentimen berita sebelum membeli.
                                 </div>
                             </div>
 

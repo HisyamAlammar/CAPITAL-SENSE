@@ -26,11 +26,15 @@ def _query_market_news_sync(q: str):
             {
                 "title": item.title,
                 "description": item.description,
+                "summary": item.summary,
                 "source": item.source,
                 "link": item.link,
                 "published_at": item.published_at.strftime("%Y-%m-%d %H:%M:%S"),
                 "sentiment_label": item.sentiment_label,
                 "sentiment_score": item.sentiment_score,
+                "event_type": item.event_type,
+                "market_impact": item.market_impact,
+                "ai_rationale": item.ai_rationale,
             }
             for item in results
         ]

@@ -10,13 +10,76 @@ import Link from 'next/link';
 import StockChart from '@/components/StockChart';
 import FundamentalCard from '@/components/FundamentalCard';
 
+interface StockHistoryPoint {
+    time: string;
+    open: number | null;
+    high: number | null;
+    low: number | null;
+    close: number | null;
+    volume?: number;
+}
+
+interface ShareHolder {
+    name: string;
+    shares: number;
+    date: string;
+    type: string;
+}
+
+interface StockData {
+    info?: {
+        longName?: string;
+    };
+    history?: StockHistoryPoint[];
+    market_cap?: number;
+    pe_ratio?: number;
+    pbv_ratio?: number;
+    roe?: number;
+    dividend_yield?: number;
+    book_value?: number;
+    shares_outstanding?: number;
+    float_shares?: number;
+    enterprise_value?: number;
+    ebitda?: number;
+    share_holders?: ShareHolder[];
+    sector?: string;
+    industry?: string;
+    beta?: number;
+    average_volume?: number;
+    ipo_date?: number;
+    website?: string;
+    fifty_two_week_low?: number;
+    fifty_two_week_high?: number;
+}
+
+interface Prediction {
+    price: number;
+    prediction: string;
+    confidence: string;
+    target_price: number;
+    timeframe?: string;
+    signals: {
+        technical: string;
+        fundamental: string;
+        sentiment: string;
+    };
+}
+
+interface NewsArticle {
+    title: string;
+    description?: string;
+    source: string;
+    link: string;
+    sentiment_label: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+}
+
 export default function StockDetailPage() {
     const params = useParams();
     const symbol = params.symbol as string;
 
-    const [stockData, setStockData] = useState<any>(null);
-    const [prediction, setPrediction] = useState<any>(null);
-    const [news, setNews] = useState<any[]>([]);
+    const [stockData, setStockData] = useState<StockData | null>(null);
+    const [prediction, setPrediction] = useState<Prediction | null>(null);
+    const [news, setNews] = useState<NewsArticle[]>([]);
     const [loading, setLoading] = useState(true);
     const [showProjection, setShowProjection] = useState(false);
     const [selectedTimeframe, setSelectedTimeframe] = useState<string>("3m");
@@ -230,7 +293,7 @@ export default function StockDetailPage() {
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                             <TrendingUp size={20} className="text-cyan-400" /> Chart Interaktif (Candlestick)
                         </h3>
-                        {stockData?.history?.length > 0 ? (
+                        {stockData?.history && stockData.history.length > 0 ? (
                             <StockChart data={stockData.history} />
                         ) : (
                             <div className="text-gray-500 flex items-center justify-center h-full">Yah, Data Chart Kosong...</div>

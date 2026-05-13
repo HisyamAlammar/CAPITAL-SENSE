@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Cookie, Depends, HTTPException
 from pydantic import BaseModel, Field, constr
 from sqlalchemy.orm import Session
 from database import SessionLocal, Portfolio
@@ -14,6 +14,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def require_auth(cs_session: str | None = Cookie(default=None)):
+    if not cs_session:
+        raise HTTPException(status_code=401, detail="Unauthorized - Beta Login Required")
 
 # Pydantic Models
 class PortfolioItem(BaseModel):
@@ -91,7 +96,7 @@ def get_portfolio(db: Session = Depends(get_db)):
             
     return results
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(require_auth)])
 def add_transaction(item: PortfolioItem, db: Session = Depends(get_db)):
     """
     Buy Stock: Updates Average Price if exists, or creates new entry.
@@ -125,7 +130,7 @@ def add_transaction(item: PortfolioItem, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Transaction added successfully"}
 
-@router.delete("/{symbol}")
+@router.delete("/{symbol}", dependencies=[Depends(require_auth)])
 def delete_asset(symbol: str, db: Session = Depends(get_db)):
     """
     Remove asset from portfolio (Sell All).

@@ -83,5 +83,4 @@ class Review(Base):
 
 
 def init_db():
-    NewsArticle.__table__.drop(bind=engine, checkfirst=True)
     Base.metadata.create_all(bind=engine)

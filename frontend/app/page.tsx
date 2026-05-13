@@ -39,7 +39,7 @@ export default function Home() {
             <PieChart className="text-blue-400 mb-4" size={32} />
             <h3 className="text-lg font-bold mb-2">Analisis Fundamental</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Metode menilai kesehatan perusahaan dengan melihat laporan keuangan, model bisnis, dan manajemen. Tujuannya menemukan saham "Undervalued" (murah tapi bagus).
+              Metode menilai kesehatan perusahaan dengan melihat laporan keuangan, model bisnis, dan manajemen. Tujuannya menemukan saham &quot;Undervalued&quot; (murah tapi bagus).
             </p>
           </div>
 
@@ -47,7 +47,7 @@ export default function Home() {
             <AlertTriangle className="text-red-400 mb-4" size={32} />
             <h3 className="text-lg font-bold mb-2">Manajemen Risiko</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Jangan taruh semua telur di satu keranjang. Diversifikasi portofolio dan gunakan "Uang Dingin" adalah kunci bertahan lama di pasar modal.
+              Jangan taruh semua telur di satu keranjang. Diversifikasi portofolio dan gunakan &quot;Uang Dingin&quot; adalah kunci bertahan lama di pasar modal.
             </p>
           </div>
         </div>
@@ -57,7 +57,7 @@ export default function Home() {
       <ReviewAccess />
 
       <footer className="w-full text-center py-8 text-gray-500 text-sm border-t border-white/5">
-        <p>© 2026 CAPITAL SENSE By Abyan Hisyam Al'ammar. All Rights Reserved.</p>
+        <p>© 2026 CAPITAL SENSE By Abyan Hisyam Al&apos;ammar. All Rights Reserved.</p>
       </footer>
     </main>
   );

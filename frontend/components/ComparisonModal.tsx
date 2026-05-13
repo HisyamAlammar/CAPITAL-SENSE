@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Stock } from './StockDashboard';
-import { X, Check } from 'lucide-react';
+import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface ComparisonModalProps {

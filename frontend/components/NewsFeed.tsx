@@ -9,12 +9,36 @@ import clsx from 'clsx';
 interface Article {
     title: string;
     description?: string;
+    summary?: string | null;
     source: string;
     link: string;
     published_at: string;
     sentiment_label: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
     sentiment_score: number;
+    event_type?: string | null;
+    market_impact?: 'LOW' | 'MEDIUM' | 'HIGH' | string | null;
 }
+
+const getImpactClassName = (impact?: string | null) => {
+    const normalizedImpact = impact?.toUpperCase();
+
+    if (normalizedImpact === 'HIGH') {
+        return "bg-red-500/10 border-red-500/25 text-red-300";
+    }
+
+    if (normalizedImpact === 'MEDIUM') {
+        return "bg-yellow-500/10 border-yellow-500/25 text-yellow-300";
+    }
+
+    if (normalizedImpact === 'LOW') {
+        return "bg-green-500/10 border-green-500/25 text-green-300";
+    }
+
+    return "bg-white/5 border-white/10 text-gray-400";
+};
+
+const formatPillText = (value?: string | null) =>
+    value ? value.replace(/_/g, ' ').toUpperCase() : null;
 
 export default function NewsFeed({ limit }: { limit?: number }) {
     const [news, setNews] = useState<Article[]>([]);
@@ -79,63 +103,87 @@ export default function NewsFeed({ limit }: { limit?: number }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {loading ? (
                     [1, 2, 3, 4].slice(0, limit || 4).map(i => (
-                        <div key={i} className="h-32 rounded-2xl bg-white/5 animate-pulse" />
+                        <div key={i} className="h-40 rounded-2xl bg-white/5 animate-pulse" />
                     ))
                 ) : (
                     displayNews.length > 0 ? (
-                        displayNews.map((item, i) => (
-                            <motion.a
-                                key={i}
-                                href={item.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                className={clsx(
-                                    "relative p-6 rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-md overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
-                                    item.sentiment_label === 'POSITIVE' && "hover:shadow-[0_0_20px_rgba(74,222,128,0.2)] hover:border-green-500/30",
-                                    item.sentiment_label === 'NEGATIVE' && "hover:shadow-[0_0_20px_rgba(248,113,113,0.2)] hover:border-red-500/30",
-                                    item.sentiment_label === 'NEUTRAL' && "hover:shadow-[0_0_20px_rgba(148,163,184,0.2)] hover:border-slate-500/30",
-                                )}
-                            >
-                                {/* Sentiment Indicator Bar */}
-                                <div className={clsx(
-                                    "absolute left-0 top-0 bottom-0 w-1",
-                                    item.sentiment_label === 'POSITIVE' && "bg-gradient-to-b from-green-400 to-green-600",
-                                    item.sentiment_label === 'NEGATIVE' && "bg-gradient-to-b from-red-400 to-red-600",
-                                    item.sentiment_label === 'NEUTRAL' && "bg-gradient-to-b from-slate-400 to-slate-600",
-                                )} />
+                        displayNews.map((item, i) => {
+                            const summaryText = item.summary?.trim() || item.description;
+                            const eventType = formatPillText(item.event_type);
+                            const marketImpact = formatPillText(item.market_impact);
 
-                                <div className="flex justify-between items-start gap-4">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-2 text-xs text-gray-400 uppercase tracking-widest">
-                                            <span>{item.source}</span>
-                                            <span>•</span>
-                                            <span>{new Date(item.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                            return (
+                                <motion.a
+                                    key={item.link || i}
+                                    href={item.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: i * 0.05 }}
+                                    className={clsx(
+                                        "relative p-5 sm:p-6 rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-md overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
+                                        item.sentiment_label === 'POSITIVE' && "hover:shadow-[0_0_20px_rgba(74,222,128,0.2)] hover:border-green-500/30",
+                                        item.sentiment_label === 'NEGATIVE' && "hover:shadow-[0_0_20px_rgba(248,113,113,0.2)] hover:border-red-500/30",
+                                        item.sentiment_label === 'NEUTRAL' && "hover:shadow-[0_0_20px_rgba(148,163,184,0.2)] hover:border-slate-500/30",
+                                    )}
+                                >
+                                    {/* Sentiment Indicator Bar */}
+                                    <div className={clsx(
+                                        "absolute left-0 top-0 bottom-0 w-1",
+                                        item.sentiment_label === 'POSITIVE' && "bg-gradient-to-b from-green-400 to-green-600",
+                                        item.sentiment_label === 'NEGATIVE' && "bg-gradient-to-b from-red-400 to-red-600",
+                                        item.sentiment_label === 'NEUTRAL' && "bg-gradient-to-b from-slate-400 to-slate-600",
+                                    )} />
+
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-400 uppercase tracking-widest">
+                                                    <span>{item.source}</span>
+                                                    <span>&middot;</span>
+                                                    <span>{new Date(item.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                                                </div>
+                                                <h3 className="text-lg font-medium leading-snug group-hover:text-white text-gray-200 transition-colors">
+                                                    {item.title}
+                                                </h3>
+                                            </div>
+
+                                            {/* Sentiment Badge */}
+                                            <div className={clsx(
+                                                "w-fit shrink-0 px-3 py-1 rounded-lg text-xs font-bold border",
+                                                item.sentiment_label === 'POSITIVE' && "bg-green-500/10 border-green-500/20 text-green-400",
+                                                item.sentiment_label === 'NEGATIVE' && "bg-red-500/10 border-red-500/20 text-red-400",
+                                                item.sentiment_label === 'NEUTRAL' && "bg-slate-500/10 border-slate-500/20 text-slate-400",
+                                            )}>
+                                                {item.sentiment_label}
+                                            </div>
                                         </div>
-                                        <h3 className="text-lg font-medium leading-snug group-hover:text-white text-gray-200 transition-colors">
-                                            {item.title}
-                                        </h3>
-                                        {item.description && (
-                                            <p className="text-sm text-gray-400 mt-2 line-clamp-2 leading-relaxed">
-                                                {item.description}
+
+                                        {summaryText && (
+                                            <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed">
+                                                {summaryText}
                                             </p>
                                         )}
-                                    </div>
 
-                                    {/* Sentiment Badge */}
-                                    <div className={clsx(
-                                        "px-3 py-1 rounded-lg text-xs font-bold border",
-                                        item.sentiment_label === 'POSITIVE' && "bg-green-500/10 border-green-500/20 text-green-400",
-                                        item.sentiment_label === 'NEGATIVE' && "bg-red-500/10 border-red-500/20 text-red-400",
-                                        item.sentiment_label === 'NEUTRAL' && "bg-slate-500/10 border-slate-500/20 text-slate-400",
-                                    )}>
-                                        {item.sentiment_label}
+                                        {(eventType || marketImpact) && (
+                                            <div className="flex flex-wrap gap-2 pt-1">
+                                                {marketImpact && (
+                                                    <span className={clsx("rounded-full border px-2.5 py-1 text-[11px] font-semibold", getImpactClassName(item.market_impact))}>
+                                                        {marketImpact} IMPACT
+                                                    </span>
+                                                )}
+                                                {eventType && (
+                                                    <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-300">
+                                                        {eventType}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            </motion.a>
-                        ))
+                                </motion.a>
+                            );
+                        })
                     ) : (
                         <div className="col-span-full text-center py-10 text-gray-500">
                             Tidak ada berita yang cocok dengan &quot;{searchQuery}&quot;
